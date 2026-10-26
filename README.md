@@ -16,7 +16,12 @@ Using Route Origin Validation (ROV) as a case study, we compare the publicly kno
 
 [`lab/index.html`](lab/index.html) is an interactive, animated companion to the paper. It shows two networks, one running ROV with RPKI and one filtering only the Cloudflare test prefix, and how traffic to the public, control and shadow targets reveals the difference.
 
-Open `lab/index.html` in any browser. No installation is needed.
+**Play it online:** https://abbasmp17.github.io/measurement-awareness-rov/lab/ (press "Play the story", or click any target).
+
+- Start the story automatically: https://abbasmp17.github.io/measurement-awareness-rov/lab/#play
+- Repeat it in a loop (e.g. on a poster screen): https://abbasmp17.github.io/measurement-awareness-rov/lab/#loop
+
+You can also download `lab/index.html` and open it in any browser. No installation is needed.
 
 ## Repository structure
 

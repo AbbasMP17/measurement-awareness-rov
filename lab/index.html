@@ -534,6 +534,18 @@ tr.flag td{background:var(--shadow-soft)}
   }
 
   render();
+
+  /* autoplay: add #play to the link to start the story, or #loop to repeat it (e.g. on a poster screen) */
+  const mode = (location.hash || '').slice(1);
+  if (mode === 'play' || mode === 'loop'){
+    const go = () => {
+      $('b-play').click();
+      if (mode === 'loop'){
+        const w = setInterval(() => { if (!busy){ clearInterval(w); setTimeout(go, 6000); } }, 500);
+      }
+    };
+    setTimeout(go, 1200);
+  }
 })();
 </script>
 </body>
