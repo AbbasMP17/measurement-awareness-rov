@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Observer Effect Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one big animated network scene as the hero; scoreboard, legend and two short bands below it. */
+:root{color-scheme:light;
+  --bg:#EEF2F6;
+  --surface:#FFFFFF;
+  --ink:#14203A;
+  --muted:#5A6579;
+  --line:#CDD5E0;
+  --accent:#D4500F;        /* public target + observatory */
+  --accent-soft:#FBE5D8;
+  --shadow:#4F4FD0;        /* shadow targets */
+  --shadow-soft:#E4E4FA;
+  --ok:#0E7A5E;            /* RPKI-valid control */
+  --ok-soft:#D9F1E9;
+  --bad:#C0303B;
+  --bad-soft:#F9DCDF;
+  --cloud:#F7F9FC;
+  --font-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --font-body:"Instrument Sans","Segoe UI",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0C121C; --surface:#141D2B; --ink:#E7ECF4; --muted:#9AA5BA; --line:#2A3650;
+    --accent:#FF7B3A; --accent-soft:#3A2418; --shadow:#9494FF; --shadow-soft:#25254C;
+    --ok:#3DCB9F; --ok-soft:#113228; --bad:#FF6B76; --bad-soft:#3B1A1E; --cloud:#18233A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0C121C; --surface:#141D2B; --ink:#E7ECF4; --muted:#9AA5BA; --line:#2A3650;
+  --accent:#FF7B3A; --accent-soft:#3A2418; --shadow:#9494FF; --shadow-soft:#25254C;
+  --ok:#3DCB9F; --ok-soft:#113228; --bad:#FF6B76; --bad-soft:#3B1A1E; --cloud:#18233A;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:28px 56px;display:flex;flex-direction:column;gap:28px}
+h1,h2{font-family:var(--font-display);margin:0;text-wrap:balance;line-height:1.05}
+p{margin:0}
+button{font:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
+header h1{font-size:clamp(30px,4.4vw,52px);font-weight:800;letter-spacing:-.02em;max-width:24ch}
+header h1 em{font-style:normal;color:var(--accent)}
+.by{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);letter-spacing:.04em}
+
+.stage{background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.caption{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);min-height:62px}
+.caption .stepdot{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:13px;font-weight:600;background:var(--bg);color:var(--muted)}
+.caption .stepdot.pub{background:var(--accent);color:var(--surface)}
+.caption .stepdot.ctl{background:var(--ok);color:var(--surface)}
+.caption .stepdot.sh{background:var(--shadow);color:var(--surface)}
+.caption .stepdot.ink{background:var(--ink);color:var(--surface)}
+.caption p{font-family:var(--font-display);font-weight:600;font-size:clamp(17px,2vw,22px);transition:opacity .35s}
+.caption p.fade{opacity:0}
+.scene-box{overflow-x:auto}
+svg.scene{display:block;width:100%;min-width:760px;height:auto}
+.controls{display:flex;flex-wrap:wrap;gap:10px;padding:14px 20px;border-top:1px solid var(--line);align-items:center}
+.btn{border:2px solid currentColor;border-radius:999px;padding:9px 18px;font-weight:600;background:transparent;font-size:15px}
+.btn.play{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.btn.pub{color:var(--accent)}
+.btn.ctl{color:var(--ok)}
+.btn.sh{color:var(--shadow)}
+.btn.ghost{color:var(--muted);border-width:1px}
+.btn:disabled{opacity:.4;cursor:wait}
+.hint{margin-left:auto;font-size:13.5px;color:var(--muted)}
+
+/* svg styling via tokens */
+.s-ink{fill:var(--ink)} .s-muted{fill:var(--muted)} .s-surface{fill:var(--surface)}
+.s-acc{fill:var(--accent)} .s-sh{fill:var(--shadow)} .s-ok{fill:var(--ok)} .s-bad{fill:var(--bad)}
+.t-display{font-family:var(--font-display);font-weight:600}
+.t-mono{font-family:var(--font-mono)}
+.asbox{fill:var(--bg);stroke:var(--line);stroke-width:2;transition:stroke .4s,fill .4s}
+.asg.aware .asbox{stroke:var(--shadow);stroke-width:4;fill:var(--shadow-soft)}
+.awarepill{opacity:0;transition:opacity .5s}
+.asg.aware .awarepill{opacity:1}
+.awarepill rect{fill:var(--shadow)}
+.cfgbox{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.cfg-k{fill:var(--accent);font-weight:600}
+.cfg-c{fill:var(--muted)}
+.cloud{fill:var(--cloud);stroke:var(--line);stroke-width:2}
+.byoip{fill:none;stroke:var(--shadow);stroke-width:2;stroke-dasharray:6 6}
+.tgt{cursor:pointer}
+.tgt:focus{outline:none}
+.tgt:hover rect,.tgt:focus-visible rect{stroke-width:4}
+.tgt-pub{fill:var(--accent-soft);stroke:var(--accent);stroke-width:2.5}
+.tgt-ctl{fill:var(--ok-soft);stroke:var(--ok);stroke-width:2}
+.tgt-sh{fill:var(--shadow-soft);stroke:var(--shadow);stroke-width:2}
+.link{stroke:var(--line);stroke-width:3;fill:none}
+.router{fill:var(--surface);stroke:var(--ink);stroke-width:2.5}
+.probe{fill:var(--surface);stroke:var(--ink);stroke-width:2}
+.badge-rov{fill:var(--ok)} .badge-acl{fill:var(--shadow)}
+.actor{fill:var(--accent-soft);stroke:var(--accent);stroke-width:3;transition:stroke-width .3s}
+.actor.pulse{stroke-width:7}
+.chip{fill:var(--bg);stroke:var(--line);stroke-width:1.5;transition:fill .5s,stroke .5s}
+.chip.lit{fill:var(--accent-soft);stroke:var(--accent)}
+
+.below{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.table-box{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:460px;font-size:14.5px}
+th,td{text-align:left;padding:10px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+th{font-family:var(--font-mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+th.pub{color:var(--accent)} th.sh{color:var(--shadow)}
+.score{font-family:var(--font-display);font-weight:800;font-size:26px;color:var(--accent);font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font-family:var(--font-mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.pill.ok{color:var(--ok);border-color:var(--ok);background:var(--ok-soft)}
+.pill.bad{color:var(--bad);border-color:var(--bad);background:var(--bad-soft)}
+.pill.aware{color:var(--shadow);border-color:var(--shadow);background:var(--shadow-soft)}
+.dash{color:var(--muted)}
+tr.flag td{background:var(--shadow-soft)}
+.legend{display:flex;flex-direction:column;gap:10px;font-size:14.5px}
+.legend div{display:flex;align-items:center;gap:10px}
+.legend i{flex:none;width:14px;height:14px;border-radius:50%;display:inline-block}
+.legend .x{font-family:var(--font-display);font-weight:800;color:var(--bad);width:14px;text-align:center}
+
+.real{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:6px}
+.stat .v{font-family:var(--font-display);font-weight:800;font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
+.stat .l{font-size:13.5px;color:var(--muted)}
+.stat.hi .v{color:var(--shadow)}
+
+.closing{background:var(--ink);border-radius:18px;padding:34px 28px;display:flex;flex-direction:column;gap:16px}
+.closing h2{color:var(--bg);font-size:clamp(26px,3.6vw,44px);font-weight:800;letter-spacing:-.01em}
+.closing h2 em{font-style:normal;color:var(--accent)}
+.links{display:flex;flex-wrap:wrap;gap:10px}
+.links a{color:var(--bg);border:1px solid currentColor;border-radius:999px;padding:8px 16px;text-decoration:none;font-weight:600;font-size:14.5px}
+.links a:hover{background:var(--accent);border-color:var(--accent)}
+
+@media (max-width:860px){
+  .below{grid-template-columns:1fr}
+  .real{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hint{margin-left:0;width:100%}
+}
+@media (prefers-reduced-motion: reduce){
+  .caption p,.asbox,.awarepill,.chip,.actor{transition:none}
+}
+</style>
+<style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>The Observer Effect in <em>Internet Measurement</em></h1>
+    <div class="by">HotNets '26 · Mohsenpour &amp; Pelsser · UCLouvain</div>
+  </header>
+
+  <section class="stage" aria-label="Interactive measurement scene">
+    <div class="caption" aria-live="polite">
+      <div class="stepdot" id="cap-dot">•</div>
+      <p id="cap">Press “Play the story”, or click any target in Cloudflare.</p>
+    </div>
+    <div class="scene-box">
+      <svg class="scene" id="scene" viewBox="0 0 1120 660" role="img" aria-label="Observatories, two networks with RIPE Atlas probes, and Cloudflare with public, control and shadow targets">
+        <g id="links"></g>
+
+        <g>
+          <circle class="actor" id="obs" cx="115" cy="140" r="72"/>
+          <text class="t-display s-ink" x="115" y="138" text-anchor="middle" font-size="16">Observatories</text>
+          <text class="t-mono s-acc" x="115" y="158" text-anchor="middle" font-size="11">public target</text>
+          <text class="t-display s-ink" x="115" y="244" text-anchor="middle" font-size="15">APNIC</text>
+          <text class="t-display s-ink" x="115" y="266" text-anchor="middle" font-size="15">RoVista</text>
+          <text class="t-display s-ink" x="115" y="288" text-anchor="middle" font-size="15">MANRS M9</text>
+          <text class="t-display s-ink" x="115" y="310" text-anchor="middle" font-size="15">Is BGP Safe Yet?</text>
+        </g>
+        <g id="chips">
+          <text class="t-mono s-muted" x="115" y="346" text-anchor="middle" font-size="10.5" letter-spacing="1">PUBLISHED SCORES FEED</text>
+          <rect class="chip" x="35" y="358" width="160" height="32" rx="16"/><text class="t-display s-ink" x="115" y="379" text-anchor="middle" font-size="13.5">Compliance</text>
+          <rect class="chip" x="35" y="400" width="160" height="32" rx="16"/><text class="t-display s-ink" x="115" y="421" text-anchor="middle" font-size="13.5">Research papers</text>
+          <rect class="chip" x="35" y="442" width="160" height="32" rx="16"/><text class="t-display s-ink" x="115" y="463" text-anchor="middle" font-size="13.5">Peering decisions</text>
+        </g>
+
+        <g id="nets"></g>
+
+        <g>
+          <rect class="cloud" x="790" y="20" width="315" height="620" rx="44"/>
+          <text class="t-display s-ink" x="947" y="56" text-anchor="middle" font-size="19">Cloudflare</text>
+          <text class="t-mono s-muted" x="947" y="76" text-anchor="middle" font-size="12">AS13335</text>
+
+          <g class="tgt" id="t-pub" tabindex="0" role="button" aria-label="Probe the public target">
+            <rect class="tgt-pub" x="822" y="96" width="250" height="80" rx="12"/>
+            <text class="t-mono s-acc" x="947" y="124" text-anchor="middle" font-size="11" letter-spacing="1">PUBLIC TARGET · RPKI-INVALID</text>
+            <text class="t-mono s-ink" x="947" y="153" text-anchor="middle" font-size="17" font-weight="600">103.21.244.0/24</text>
+          </g>
+
+          <g class="tgt" id="t-ctl" tabindex="0" role="button" aria-label="Probe the control target">
+            <rect class="tgt-ctl" x="822" y="198" width="250" height="62" rx="12"/>
+            <text class="t-mono s-ok" x="947" y="224" text-anchor="middle" font-size="11" letter-spacing="1">CONTROL · RPKI-VALID</text>
+            <text class="t-mono s-muted" x="947" y="245" text-anchor="middle" font-size="12">every probe must reach it</text>
+          </g>
+
+          <rect class="byoip" x="812" y="290" width="270" height="326" rx="16"/>
+          <text class="t-mono s-sh" x="947" y="316" text-anchor="middle" font-size="11.5" letter-spacing="1">AS209242 · BYOIP</text>
+          <text class="t-mono s-muted" x="947" y="334" text-anchor="middle" font-size="11">never published by any observatory</text>
+          <g id="shadows"></g>
+        </g>
+
+        <g id="packets"></g>
+        <g id="fx"></g>
+      </svg>
+    </div>
+    <div class="controls">
+      <button class="btn play" id="b-play">▶ Play the story</button>
+      <button class="btn pub" id="b-pub">Public target</button>
+      <button class="btn ctl" id="b-ctl">Control target</button>
+      <button class="btn sh" id="b-sh">Shadow targets</button>
+      <button class="btn ghost" id="b-reset">Reset</button>
+      <span class="hint">Tip: you can also click any target in Cloudflare.</span>
+    </div>
+  </section>
+
+  <section class="below">
+    <div class="card">
+      <div class="label">Scoreboard</div>
+      <div class="table-box">
+        <table>
+          <thead><tr><th>Network</th><th class="pub">Published ROV score</th><th class="sh">Shadow targets</th><th>Reality</th></tr></thead>
+          <tbody id="board"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Legend · all probes are RIPE Atlas probes</div>
+      <div class="legend">
+        <div><i style="background:var(--accent)"></i>Traffic to the public target</div>
+        <div><i style="background:var(--ok)"></i>Traffic to the RPKI-valid control target</div>
+        <div><i style="background:var(--shadow)"></i>Traffic to the shadow targets</div>
+        <div><span class="x">✕</span>Dropped inside the network</div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-label="Results on the real Internet">
+    <div class="label" style="margin-bottom:12px">On the real Internet · 12,130 RIPE Atlas probes, 14 days</div>
+    <div class="real">
+      <div class="stat"><div class="v">1,208</div><div class="l">networks we could test reliably</div></div>
+      <div class="stat hi"><div class="v">15</div><div class="l">drop the public target, reach the shadow targets</div></div>
+      <div class="stat"><div class="v">90.3%</div><div class="l">their median APNIC ROV score</div></div>
+      <div class="stat"><div class="v">100%</div><div class="l">their median RoVista ROV score</div></div>
+    </div>
+  </section>
+
+  <section class="closing">
+    <h2>Are we measuring the Internet, or <em>the Internet's response to being measured</em>?</h2>
+    <div class="links">
+      <a href="https://doi.org/10.1145/3847290.3859951" target="_blank" rel="noopener">Paper</a>
+      <a href="https://github.com/AbbasMP17/When-Measurements-Become-Targets" target="_blank" rel="noopener">Code &amp; data</a>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  const NS = 'http://www.w3.org/2000/svg';
+  const $ = id => document.getElementById(id);
+  const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const SPEED = reduced ? 0.0001 : 1;
+
+  /* config lines: [text, kind]  kind: '' | 'k' keyword | 'c' comment */
+  const NETS = [
+    {id:'A', name:'Network A', asn:'AS64501', pol:'rov', label:'ROV with RPKI', badge:'RPKI', badgeCls:'badge-rov', y:30, h:290,
+      cfg:[
+        ['! drop every RPKI-invalid route','c'],
+        ['router bgp 64501',''],
+        [' bgp rpki server tcp 192.0.2.10 port 3323 refresh 600',''],
+        [' neighbor X route-map ROV in',''],
+        ['route-map ROV deny 10','k'],
+        [' match rpki invalid','k'],
+        ['route-map ROV permit 20','']
+      ]},
+    {id:'B', name:'Network B', asn:'AS64502', pol:'acl', label:'ACL on the Cloudflare test prefix', badge:'ACL', badgeCls:'badge-acl', y:350, h:290,
+      cfg:[
+        ['! target-specific ROV filtering','c'],
+        ['ip prefix-list ROV-INV deny','k'],
+        [' 103.21.244.0/24','k'],
+        [' 2606:4700:7000::/48','k'],
+        ['router bgp MA-AS',''],
+        [' neighbor X prefix-list ROV-INV in',''],
+        ['! other RPKI-invalid routes are accepted','c']
+      ]}
+  ];
+  const BOX = {x:270, w:470};
+  NETS.forEach(n => {
+    n.probe = {x:BOX.x+60, y:n.y+n.h-52};
+    n.router = {x:BOX.x+BOX.w-56, y:n.y+n.h-52};
+    n.drop = {x:(BOX.x+60 + BOX.x+BOX.w-56) / 2, y:n.y+n.h-52};
+    n.res = {pub:null, sh:null};
+  });
+
+  const TGT = { pub:{x:822, y:136}, ctl:{x:822, y:229} };
+  const SH = [0,1,2].map(i => ({x:832, y:384 + i*78}));
+  const OBS = {x:115, y:140};
+  const CF_IN = {x:790};
+
+  function el(tag, attrs, parent, text){
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function bindTarget(g, fn){
+    g.addEventListener('click', fn);
+    g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } });
+  }
+
+  /* shadow targets */
+  const shG = $('shadows');
+  SH.forEach((s, i) => {
+    const g = el('g', {class:'tgt', tabindex:0, role:'button', 'aria-label':'Probe shadow target ' + (i+1)}, shG);
+    el('rect', {class:'tgt-sh', x:832, y:s.y-28, width:230, height:56, rx:10}, g);
+    el('text', {class:'t-mono s-sh', x:947, y:s.y-6, 'text-anchor':'middle', 'font-size':11, 'letter-spacing':1}, g, 'SHADOW TARGET ' + (i+1));
+    el('text', {class:'t-mono s-muted', x:947, y:s.y+14, 'text-anchor':'middle', 'font-size':11.5}, g, 'RPKI-invalid · undisclosed');
+    bindTarget(g, () => single('sh', i));
+  });
+
+  const linksG = $('links');
+  NETS.forEach(n => el('line', {class:'link', x1:n.router.x, y1:n.router.y, x2:CF_IN.x, y2:n.router.y}, linksG));
+
+  /* networks */
+  const netsG = $('nets');
+  NETS.forEach(n => {
+    const g = el('g', {class:'asg'}, netsG);
+    n.g = g;
+    el('rect', {class:'asbox', x:BOX.x, y:n.y, width:BOX.w, height:n.h, rx:18}, g);
+    el('text', {class:'t-display s-ink', x:BOX.x+20, y:n.y+34, 'font-size':21}, g, n.name);
+    el('text', {class:'t-mono s-muted', x:BOX.x+BOX.w-20, y:n.y+34, 'text-anchor':'end', 'font-size':12}, g, n.asn);
+    el('text', {class:'t-mono s-muted', x:BOX.x+20, y:n.y+56, 'font-size':12.5}, g, n.label);
+    // aware pill sits on the top edge of the box, clear of the labels
+    const pill = el('g', {class:'awarepill'}, g);
+    el('rect', {x:BOX.x+BOX.w-190, y:n.y-14, width:170, height:28, rx:14}, pill);
+    el('text', {class:'t-mono s-surface', x:BOX.x+BOX.w-105, y:n.y+5, 'text-anchor':'middle', 'font-size':11.5, 'font-weight':600, 'letter-spacing':1}, pill, 'MEASUREMENT-AWARE');
+    // config block
+    const cy0 = n.y + 70;
+    el('rect', {class:'cfgbox', x:BOX.x+16, y:cy0, width:BOX.w-32, height:n.cfg.length*15+18, rx:10}, g);
+    n.cfg.forEach((ln, i) => {
+      const cls = 't-mono ' + (ln[1] === 'k' ? 'cfg-k' : ln[1] === 'c' ? 'cfg-c' : 's-ink');
+      const t = el('text', {class:cls, x:BOX.x+30, y:cy0+21+i*15, 'font-size':11.5}, g);
+      t.setAttributeNS('http://www.w3.org/XML/1998/namespace', 'xml:space', 'preserve');
+      t.textContent = ln[0];
+    });
+    // probe → router
+    el('line', {stroke:'var(--line)', 'stroke-width':3, x1:n.probe.x+24, y1:n.probe.y, x2:n.router.x-26, y2:n.router.y}, g);
+    el('circle', {class:'probe', cx:n.probe.x, cy:n.probe.y, r:24}, g);
+    el('text', {class:'t-mono s-ink', x:n.probe.x, y:n.probe.y+4, 'text-anchor':'middle', 'font-size':10, 'font-weight':600}, g, 'ATLAS');
+    el('text', {class:'t-mono s-muted', x:n.probe.x, y:n.probe.y+40, 'text-anchor':'middle', 'font-size':10.5}, g, 'RIPE Atlas probe');
+    const hex = [0,1,2,3,4,5].map(k => { const a = Math.PI/3*k + Math.PI/6; return (n.router.x + 26*Math.cos(a)) + ',' + (n.router.y + 26*Math.sin(a)); }).join(' ');
+    el('polygon', {class:'router', points:hex}, g);
+    el('circle', {class:n.badgeCls, cx:n.router.x+24, cy:n.router.y-22, r:17}, g);
+    el('text', {class:'t-mono s-surface', x:n.router.x+24, y:n.router.y-18, 'text-anchor':'middle', 'font-size':9.5, 'font-weight':600}, g, n.badge);
+    el('text', {class:'t-mono s-muted', x:n.router.x, y:n.router.y+40, 'text-anchor':'middle', 'font-size':10.5}, g, 'to Cloudflare');
+  });
+
+  bindTarget($('t-pub'), () => single('pub'));
+  bindTarget($('t-ctl'), () => single('ctl'));
+
+  const reaches = (pol, kind) => kind === 'ctl' || (pol === 'acl' && kind === 'sh');
+  const COLOR = {pub:'var(--accent)', ctl:'var(--ok)', sh:'var(--shadow)'};
+
+  const pktG = $('packets'), fxG = $('fx');
+  const sleep = ms => new Promise(r => setTimeout(r, ms * SPEED));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const ease = t => t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2) / 2;
+  function animate(dur, step){
+    return new Promise(res => {
+      if (reduced){ step(1); return res(); }
+      const t0 = performance.now();
+      function f(now){ const t = Math.min(1, (now - t0) / dur); step(t); if (t < 1) requestAnimationFrame(f); else res(); }
+      requestAnimationFrame(f);
+    });
+  }
+
+  async function packet(n, target, kind){
+    const color = COLOR[kind];
+    const c = el('circle', {r:10, cx:n.probe.x, cy:n.probe.y, fill:color, stroke:'var(--surface)', 'stroke-width':2}, pktG);
+    const ok = reaches(n.pol, kind);
+    if (!ok){
+      await animate(1000, t => c.setAttribute('cx', lerp(n.probe.x, n.drop.x, ease(t))));
+      c.remove();
+      const x = el('text', {class:'t-display s-bad', x:n.drop.x, y:n.drop.y + 14, 'text-anchor':'middle', 'font-size':42, 'font-weight':800}, fxG, '✕');
+      await animate(500, t => x.setAttribute('font-size', 42 + 10*t));
+      await sleep(900);
+      await animate(500, t => x.setAttribute('opacity', 1 - t));
+      x.remove();
+      return false;
+    }
+    await animate(1100, t => c.setAttribute('cx', lerp(n.probe.x, n.router.x, ease(t))));
+    await animate(700, t => c.setAttribute('cx', lerp(n.router.x, CF_IN.x, ease(t))));
+    const sx = CF_IN.x, sy = n.router.y;
+    await animate(1000, t => { const e = ease(t); c.setAttribute('cx', lerp(sx, target.x, e)); c.setAttribute('cy', lerp(sy, target.y, e)); });
+    const ring = el('circle', {cx:target.x, cy:target.y, r:10, fill:'none', stroke:color, 'stroke-width':3}, fxG);
+    c.remove();
+    await animate(700, t => { ring.setAttribute('r', 10 + 28*t); ring.setAttribute('opacity', 1 - t); });
+    ring.remove();
+    return true;
+  }
+
+  async function publish(){
+    const obs = $('obs');
+    obs.classList.add('pulse'); await sleep(500); obs.classList.remove('pulse');
+    const chips = document.querySelectorAll('#chips .chip');
+    for (const ch of chips){
+      const y = +ch.getAttribute('y') + 16;
+      const d = el('circle', {r:7, cx:OBS.x, cy:OBS.y + 72, fill:'var(--accent)'}, pktG);
+      await animate(600, t => d.setAttribute('cy', lerp(OBS.y + 72, y, ease(t))));
+      d.remove(); ch.classList.add('lit');
+      await sleep(150);
+    }
+  }
+
+  async function runPub(){
+    const res = await Promise.all(NETS.map((n, i) => sleep(i * 500).then(() => packet(n, TGT.pub, 'pub'))));
+    NETS.forEach((n, i) => { n.res.pub = res[i]; draw(n); });
+    render();
+  }
+  async function runCtl(){
+    await Promise.all(NETS.map((n, i) => sleep(i * 500).then(() => packet(n, TGT.ctl, 'ctl'))));
+  }
+  async function runSh(onlyIdx){
+    const idx = onlyIdx == null ? [0,1,2] : [onlyIdx];
+    const res = await Promise.all(NETS.map((n, i) =>
+      Promise.all(idx.map((s, j) => sleep(i * 500 + j * 600).then(() => packet(n, SH[s], 'sh')))).then(r => r.some(Boolean))
+    ));
+    NETS.forEach((n, i) => { n.res.sh = res[i]; draw(n); });
+    render();
+  }
+
+  let busy = false;
+  function lock(v){ busy = v; ['b-play','b-pub','b-ctl','b-sh','b-reset'].forEach(id => $(id).disabled = v); }
+  async function setCap(kind, num, text){
+    const p = $('cap'), dot = $('cap-dot');
+    if (!reduced){ p.classList.add('fade'); await sleep(350); }
+    dot.className = 'stepdot' + (kind ? ' ' + kind : '');
+    dot.textContent = num || '•';
+    p.textContent = text;
+    p.classList.remove('fade');
+  }
+
+  async function single(kind, idx){
+    if (busy) return; lock(true);
+    if (kind === 'pub'){
+      await setCap('pub', '•', 'RIPE Atlas probes in both networks send traceroutes to the public target.');
+      await runPub(); await publish();
+      await setCap('pub', '•', scoreLine());
+    } else if (kind === 'ctl'){
+      await setCap('ctl', '•', 'RIPE Atlas probes send traceroutes to the RPKI-valid control target.');
+      await runCtl();
+      await setCap('ctl', '•', 'Both networks reach the control target: the path to Cloudflare works.');
+    } else {
+      await setCap('sh', '•', idx == null ? 'RIPE Atlas probes send traceroutes to the shadow targets.' : 'RIPE Atlas probes send traceroutes to shadow target ' + (idx + 1) + '.');
+      await runSh(idx);
+      await setCap('sh', '•', revealLine());
+    }
+    lock(false);
+  }
+
+  $('b-pub').addEventListener('click', () => single('pub'));
+  $('b-ctl').addEventListener('click', () => single('ctl'));
+  $('b-sh').addEventListener('click', () => single('sh'));
+  $('b-reset').addEventListener('click', () => { if (!busy) reset(false); });
+  $('b-play').addEventListener('click', async () => {
+    if (busy) return; lock(true);
+    reset(true);
+    await setCap('pub', 1, 'Observatories all rely on one public Cloudflare prefix, RPKI-invalid on purpose.');
+    await sleep(4200);
+    await setCap('ink', 2, 'Network A runs ROV with RPKI. Network B only filters that one prefix.');
+    await sleep(4800);
+    await setCap('pub', 3, 'RIPE Atlas probes in both networks send traceroutes to the public target.');
+    await sleep(1200);
+    await runPub();
+    await setCap('pub', 4, 'Both are dropped inside the network. Observatories publish 100% ROV for A and for B.');
+    await publish();
+    await sleep(4200);
+    await setCap('ctl', 5, 'Control check: both networks reach the RPKI-valid target inside Cloudflare.');
+    await sleep(1200);
+    await runCtl();
+    await sleep(2400);
+    await setCap('sh', 6, 'Now the shadow targets: equivalent RPKI-invalid prefixes that no observatory publishes.');
+    await sleep(2600);
+    await runSh();
+    await setCap('sh', 7, revealLine());
+    lock(false);
+  });
+
+  function scoreLine(){
+    const blocked = NETS.filter(n => n.res.pub === false).map(n => n.id);
+    if (blocked.length === 2) return 'Both networks drop it. Observatories publish 100% ROV for A and for B.';
+    if (blocked.length === 1) return 'Network ' + blocked[0] + ' drops it: published ROV score 100%.';
+    return 'No network drops it.';
+  }
+  function revealLine(){
+    const aware = NETS.filter(n => n.res.pub === false && n.res.sh === true);
+    if (aware.length) return aware.map(n => n.name).join(' and ') + ' reaches the shadow targets. Its 100% score shows only what it exposes to observatories.';
+    if (NETS.some(n => n.res.sh === true)) return 'Network B reaches the shadow targets. Now probe the public target to compare.';
+    return 'Both networks drop the shadow targets.';
+  }
+
+  function draw(n){
+    n.g.classList.toggle('aware', n.res.pub === false && n.res.sh === true);
+  }
+  function reset(silent){
+    NETS.forEach(n => { n.res = {pub:null, sh:null}; draw(n); });
+    document.querySelectorAll('#chips .chip').forEach(c => c.classList.remove('lit'));
+    render();
+    if (!silent) setCap('', 0, 'Press “Play the story”, or click any target in Cloudflare.');
+  }
+  function render(){
+    $('board').innerHTML = NETS.map(n => {
+      const s = n.res;
+      const pub = s.pub === null ? '<span class="dash">—</span>' : '<span class="score">' + (s.pub ? '0%' : '100%') + '</span>';
+      const sh = s.sh === null ? '<span class="dash">—</span>' : (s.sh ? '<span class="pill bad">reachable</span>' : '<span class="pill ok">dropped</span>');
+      let v = '<span class="dash">—</span>', flag = false;
+      if (s.pub !== null && s.sh !== null){
+        if (!s.pub && !s.sh) v = '<span class="pill ok">ROV everywhere</span>';
+        else if (!s.pub && s.sh){ v = '<span class="pill aware">measurement-aware</span>'; flag = true; }
+        else if (s.pub && s.sh) v = '<span class="pill bad">no ROV</span>';
+      }
+      return '<tr' + (flag ? ' class="flag"' : '') + '><td><b>' + n.name + '</b><br><span class="dash" style="font-size:12.5px">' + n.label + '</span></td><td>' + pub + '</td><td>' + sh + '</td><td>' + v + '</td></tr>';
+    }).join('');
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
