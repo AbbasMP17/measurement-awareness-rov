@@ -481,9 +481,9 @@ tr.flag td{background:var(--shadow-soft)}
   $('b-play').addEventListener('click', async () => {
     if (busy) return; lock(true);
     reset(true);
-    await setCap('pub', 1, 'Observatories all rely on one public Cloudflare prefix, RPKI-invalid on purpose.');
+    await setCap('pub', 1, 'Observatories converge on one public test target: a Cloudflare prefix kept RPKI-invalid for ROV testing.');
     await sleep(4200);
-    await setCap('ink', 2, 'Network A runs ROV with RPKI. Network B only filters that one prefix.');
+    await setCap('ink', 2, 'Network A applies ROV using RPKI. Network B filters only the public Cloudflare prefix, using an ACL.');
     await sleep(4800);
     await setCap('pub', 3, 'RIPE Atlas probes in both networks send traceroutes to the public target.');
     await sleep(1200);
