@@ -44,7 +44,7 @@
 }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.5}
-.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:28px 56px;display:flex;flex-direction:column;gap:28px}
+.wrap{max-width:1360px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:28px 56px;display:flex;flex-direction:column;gap:28px}
 h1,h2{font-family:var(--font-display);margin:0;text-wrap:balance;line-height:1.05}
 p{margin:0}
 button{font:inherit;cursor:pointer}
@@ -178,17 +178,17 @@ tr.flag td{background:var(--shadow-soft)}
         <g>
           <circle class="actor" id="obs" cx="115" cy="140" r="72"/>
           <text class="t-display s-ink" x="115" y="138" text-anchor="middle" font-size="16">Observatories</text>
-          <text class="t-mono s-acc" x="115" y="158" text-anchor="middle" font-size="11">public target</text>
+          <text class="t-mono s-acc" x="115" y="158" text-anchor="middle" font-size="13">public target</text>
           <text class="t-display s-ink" x="115" y="244" text-anchor="middle" font-size="15">APNIC</text>
           <text class="t-display s-ink" x="115" y="266" text-anchor="middle" font-size="15">RoVista</text>
           <text class="t-display s-ink" x="115" y="288" text-anchor="middle" font-size="15">MANRS M9</text>
           <text class="t-display s-ink" x="115" y="310" text-anchor="middle" font-size="15">Is BGP Safe Yet?</text>
         </g>
         <g id="chips">
-          <text class="t-mono s-muted" x="115" y="346" text-anchor="middle" font-size="10.5" letter-spacing="1">PUBLISHED SCORES FEED</text>
-          <rect class="chip" x="15" y="358" width="200" height="32" rx="16"/><text class="t-display s-ink" x="115" y="379" text-anchor="middle" font-size="13.5">Compliance frameworks</text>
-          <rect class="chip" x="15" y="400" width="200" height="32" rx="16"/><text class="t-display s-ink" x="115" y="421" text-anchor="middle" font-size="13.5">Research papers</text>
-          <rect class="chip" x="15" y="442" width="200" height="32" rx="16"/><text class="t-display s-ink" x="115" y="463" text-anchor="middle" font-size="13.5">Business relationships</text>
+          <text class="t-mono s-muted" x="115" y="346" text-anchor="middle" font-size="12" letter-spacing="1">PUBLISHED SCORES FEED</text>
+          <rect class="chip" x="15" y="358" width="200" height="32" rx="16"/><text class="t-display s-ink" x="115" y="379" text-anchor="middle" font-size="15">Compliance frameworks</text>
+          <rect class="chip" x="15" y="400" width="200" height="32" rx="16"/><text class="t-display s-ink" x="115" y="421" text-anchor="middle" font-size="15">Research papers</text>
+          <rect class="chip" x="15" y="442" width="200" height="32" rx="16"/><text class="t-display s-ink" x="115" y="463" text-anchor="middle" font-size="15">Business relationships</text>
         </g>
 
         <g id="nets"></g>
@@ -196,23 +196,23 @@ tr.flag td{background:var(--shadow-soft)}
         <g>
           <rect class="cloud" x="790" y="20" width="315" height="620" rx="44"/>
           <text class="t-display s-ink" x="947" y="56" text-anchor="middle" font-size="19">Cloudflare</text>
-          <text class="t-mono s-muted" x="947" y="76" text-anchor="middle" font-size="12">AS13335</text>
+          <text class="t-mono s-muted" x="947" y="76" text-anchor="middle" font-size="14">AS13335</text>
 
           <g class="tgt" id="t-pub" tabindex="0" role="button" aria-label="Probe the public target">
             <rect class="tgt-pub" x="822" y="96" width="250" height="80" rx="12"/>
-            <text class="t-mono s-acc" x="947" y="124" text-anchor="middle" font-size="11" letter-spacing="1">PUBLIC TARGET · RPKI-INVALID</text>
+            <text class="t-mono s-acc" x="947" y="124" text-anchor="middle" font-size="12.5" letter-spacing=".5">PUBLIC TARGET · RPKI-INVALID</text>
             <text class="t-mono s-ink" x="947" y="153" text-anchor="middle" font-size="17" font-weight="600">103.21.244.0/24</text>
           </g>
 
           <g class="tgt" id="t-ctl" tabindex="0" role="button" aria-label="Probe the control target">
             <rect class="tgt-ctl" x="822" y="198" width="250" height="62" rx="12"/>
-            <text class="t-mono s-ok" x="947" y="224" text-anchor="middle" font-size="11" letter-spacing="1">CONTROL · RPKI-VALID</text>
-            <text class="t-mono s-muted" x="947" y="245" text-anchor="middle" font-size="12">every probe must reach it</text>
+            <text class="t-mono s-ok" x="947" y="224" text-anchor="middle" font-size="12.5" letter-spacing=".5">CONTROL · RPKI-VALID</text>
+            <text class="t-mono s-muted" x="947" y="245" text-anchor="middle" font-size="13.5">every probe must reach it</text>
           </g>
 
           <rect class="byoip" x="812" y="290" width="270" height="326" rx="16"/>
-          <text class="t-mono s-sh" x="947" y="316" text-anchor="middle" font-size="11.5" letter-spacing="1">AS209242 · BYOIP</text>
-          <text class="t-mono s-muted" x="947" y="334" text-anchor="middle" font-size="11">never published by any observatory</text>
+          <text class="t-mono s-sh" x="947" y="316" text-anchor="middle" font-size="13" letter-spacing=".5">AS209242 · BYOIP</text>
+          <text class="t-mono s-muted" x="947" y="334" text-anchor="middle" font-size="11.5">never published by any observatory</text>
           <g id="shadows"></g>
         </g>
 
@@ -278,7 +278,7 @@ tr.flag td{background:var(--shadow-soft)}
 
   /* config lines: [text, kind]  kind: '' | 'k' keyword | 'c' comment */
   const NETS = [
-    {id:'A', name:'Network A', asn:'AS64501', pol:'rov', label:'ROV with RPKI', badge:'RPKI', badgeCls:'badge-rov', y:30, h:290,
+    {id:'A', name:'Network A', asn:'AS64501', pol:'rov', label:'ROV with RPKI', badge:'RPKI', badgeCls:'badge-rov', y:22, h:300,
       cfg:[
         ['! drop every RPKI-invalid route','c'],
         ['router bgp 64501',''],
@@ -288,7 +288,7 @@ tr.flag td{background:var(--shadow-soft)}
         [' match rpki invalid','k'],
         ['route-map ROV permit 20','']
       ]},
-    {id:'B', name:'Network B', asn:'AS64502', pol:'acl', label:'ACL on the Cloudflare test prefix', badge:'ACL', badgeCls:'badge-acl', y:350, h:290,
+    {id:'B', name:'Network B', asn:'AS64502', pol:'acl', label:'ACL on the Cloudflare test prefix', badge:'ACL', badgeCls:'badge-acl', y:340, h:300,
       cfg:[
         ['! target-specific ROV filtering','c'],
         ['ip prefix-list ROV-INV deny','k'],
@@ -301,9 +301,9 @@ tr.flag td{background:var(--shadow-soft)}
   ];
   const BOX = {x:270, w:470};
   NETS.forEach(n => {
-    n.probe = {x:BOX.x+60, y:n.y+n.h-52};
-    n.router = {x:BOX.x+BOX.w-56, y:n.y+n.h-52};
-    n.drop = {x:(BOX.x+60 + BOX.x+BOX.w-56) / 2, y:n.y+n.h-52};
+    n.probe = {x:BOX.x+76, y:n.y+n.h-50};
+    n.router = {x:BOX.x+BOX.w-66, y:n.y+n.h-50};
+    n.drop = {x:(BOX.x+76 + BOX.x+BOX.w-66) / 2, y:n.y+n.h-50};
     n.res = {pub:null, sh:null};
   });
 
@@ -329,8 +329,8 @@ tr.flag td{background:var(--shadow-soft)}
   SH.forEach((s, i) => {
     const g = el('g', {class:'tgt', tabindex:0, role:'button', 'aria-label':'Probe shadow target ' + (i+1)}, shG);
     el('rect', {class:'tgt-sh', x:832, y:s.y-28, width:230, height:56, rx:10}, g);
-    el('text', {class:'t-mono s-sh', x:947, y:s.y-6, 'text-anchor':'middle', 'font-size':11, 'letter-spacing':1}, g, 'SHADOW TARGET ' + (i+1));
-    el('text', {class:'t-mono s-muted', x:947, y:s.y+14, 'text-anchor':'middle', 'font-size':11.5}, g, 'RPKI-invalid · undisclosed');
+    el('text', {class:'t-mono s-sh', x:947, y:s.y-6, 'text-anchor':'middle', 'font-size':12.5, 'letter-spacing':.5}, g, 'SHADOW TARGET ' + (i+1));
+    el('text', {class:'t-mono s-muted', x:947, y:s.y+14, 'text-anchor':'middle', 'font-size':13}, g, 'RPKI-invalid · undisclosed');
     bindTarget(g, () => single('sh', i));
   });
 
@@ -344,31 +344,31 @@ tr.flag td{background:var(--shadow-soft)}
     n.g = g;
     el('rect', {class:'asbox', x:BOX.x, y:n.y, width:BOX.w, height:n.h, rx:18}, g);
     el('text', {class:'t-display s-ink', x:BOX.x+20, y:n.y+34, 'font-size':21}, g, n.name);
-    el('text', {class:'t-mono s-muted', x:BOX.x+BOX.w-20, y:n.y+34, 'text-anchor':'end', 'font-size':12}, g, n.asn);
-    el('text', {class:'t-mono s-muted', x:BOX.x+20, y:n.y+56, 'font-size':12.5}, g, n.label);
+    el('text', {class:'t-mono s-muted', x:BOX.x+BOX.w-20, y:n.y+34, 'text-anchor':'end', 'font-size':14}, g, n.asn);
+    el('text', {class:'t-mono s-muted', x:BOX.x+20, y:n.y+56, 'font-size':14}, g, n.label);
     // aware pill sits on the top edge of the box, clear of the labels
     const pill = el('g', {class:'awarepill'}, g);
     el('rect', {x:BOX.x+BOX.w-190, y:n.y-14, width:170, height:28, rx:14}, pill);
-    el('text', {class:'t-mono s-surface', x:BOX.x+BOX.w-105, y:n.y+5, 'text-anchor':'middle', 'font-size':11.5, 'font-weight':600, 'letter-spacing':1}, pill, 'MEASUREMENT-AWARE');
+    el('text', {class:'t-mono s-surface', x:BOX.x+BOX.w-105, y:n.y+5, 'text-anchor':'middle', 'font-size':12.5, 'font-weight':600, 'letter-spacing':.8}, pill, 'MEASUREMENT-AWARE');
     // config block
-    const cy0 = n.y + 70;
-    el('rect', {class:'cfgbox', x:BOX.x+16, y:cy0, width:BOX.w-32, height:n.cfg.length*15+18, rx:10}, g);
+    const cy0 = n.y + 66;
+    el('rect', {class:'cfgbox', x:BOX.x+16, y:cy0, width:BOX.w-32, height:n.cfg.length*17+16, rx:10}, g);
     n.cfg.forEach((ln, i) => {
       const cls = 't-mono ' + (ln[1] === 'k' ? 'cfg-k' : ln[1] === 'c' ? 'cfg-c' : 's-ink');
-      const t = el('text', {class:cls, x:BOX.x+30, y:cy0+21+i*15, 'font-size':11.5}, g);
+      const t = el('text', {class:cls, x:BOX.x+30, y:cy0+22+i*17, 'font-size':13}, g);
       t.setAttributeNS('http://www.w3.org/XML/1998/namespace', 'xml:space', 'preserve');
       t.textContent = ln[0];
     });
     // probe → router
     el('line', {stroke:'var(--line)', 'stroke-width':3, x1:n.probe.x+24, y1:n.probe.y, x2:n.router.x-26, y2:n.router.y}, g);
     el('circle', {class:'probe', cx:n.probe.x, cy:n.probe.y, r:24}, g);
-    el('text', {class:'t-mono s-ink', x:n.probe.x, y:n.probe.y+4, 'text-anchor':'middle', 'font-size':10, 'font-weight':600}, g, 'ATLAS');
-    el('text', {class:'t-mono s-muted', x:n.probe.x, y:n.probe.y+40, 'text-anchor':'middle', 'font-size':10.5}, g, 'RIPE Atlas probe');
+    el('text', {class:'t-mono s-ink', x:n.probe.x, y:n.probe.y+4, 'text-anchor':'middle', 'font-size':11.5, 'font-weight':600}, g, 'ATLAS');
+    el('text', {class:'t-mono s-muted', x:n.probe.x, y:n.probe.y+38, 'text-anchor':'middle', 'font-size':12.5}, g, 'RIPE Atlas probe');
     const hex = [0,1,2,3,4,5].map(k => { const a = Math.PI/3*k + Math.PI/6; return (n.router.x + 26*Math.cos(a)) + ',' + (n.router.y + 26*Math.sin(a)); }).join(' ');
     el('polygon', {class:'router', points:hex}, g);
     el('circle', {class:n.badgeCls, cx:n.router.x+24, cy:n.router.y-22, r:17}, g);
-    el('text', {class:'t-mono s-surface', x:n.router.x+24, y:n.router.y-18, 'text-anchor':'middle', 'font-size':9.5, 'font-weight':600}, g, n.badge);
-    el('text', {class:'t-mono s-muted', x:n.router.x, y:n.router.y+40, 'text-anchor':'middle', 'font-size':10.5}, g, 'to Cloudflare');
+    el('text', {class:'t-mono s-surface', x:n.router.x+24, y:n.router.y-18, 'text-anchor':'middle', 'font-size':10.5, 'font-weight':600}, g, n.badge);
+    el('text', {class:'t-mono s-muted', x:n.router.x, y:n.router.y+38, 'text-anchor':'middle', 'font-size':12.5}, g, 'to Cloudflare');
   });
 
   bindTarget($('t-pub'), () => single('pub'));
