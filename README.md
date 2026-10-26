@@ -4,7 +4,7 @@ Abbas Mohsenpour and Cristel Pelsser (UCLouvain) · HotNets '26 · [DOI 10.1145/
 
 ## ▶ Interactive lab
 
-Can a network treat a well-known measurement target differently from an equivalent one that nobody knows? **[Open the lab](https://abbasmp17.github.io/measurement-awareness-rov/)** to play it yourself.
+Can a network treat a well-known measurement target differently from an equivalent target that is not publicly associated with any measurement? **[Open the lab](https://abbasmp17.github.io/measurement-awareness-rov/)** to play it yourself.
 
 [![Interactive lab preview](lab-preview.gif)](https://abbasmp17.github.io/measurement-awareness-rov/)
 
