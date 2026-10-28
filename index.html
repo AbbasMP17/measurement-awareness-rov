@@ -264,7 +264,7 @@ svg.scene.tall{max-height:none}
   const $ = id => document.getElementById(id);
   const svg = $('scene'), stage = $('stage');
   const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const SPEED = reduced ? 0.0001 : 1;
+  const SPEED = 1;   // keep the story's timing even with reduced motion
 
   /* config lines: [text, kind]  kind: '' | 'k' highlighted | 'c' comment.  cfgShort is used on phones. */
   const NETS = [
@@ -459,7 +459,7 @@ svg.scene.tall{max-height:none}
   const ease = t => t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2) / 2;
   function animate(dur, step){
     return new Promise(res => {
-      if (reduced){ step(1); return res(); }
+      if (reduced){ setTimeout(() => { step(1); res(); }, dur); return; }   // no movement, same pacing
       const t0 = performance.now();
       function f(now){ const t = Math.min(1, (now - t0) / dur); step(t); if (t < 1) requestAnimationFrame(f); else res(); }
       requestAnimationFrame(f);
