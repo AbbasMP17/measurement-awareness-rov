@@ -377,7 +377,7 @@ svg.scene.tall{max-height:none}
       el('polygon', {points:'812,133 820,140 812,147', fill:'var(--line)'}, linksG);
       T(og, 1074, 144, 't-mono s-acc', 12, 'PUBLISHED ROV SCORE', {'letter-spacing':.8, 'text-anchor':'end'});
       NETS.forEach((n, i) => drawRow(og, n, 834, 156 + i*98, 252, 86, true));
-      T(og, 834, 376, 't-mono s-muted', 12, 'SCORES FEED INTO', {'letter-spacing':.8});
+      T(og, 960, 376, 't-mono s-muted', 12, '↓  SCORES FEED INTO  ↓', {'letter-spacing':.8, 'text-anchor':'middle', 'xml:space':'preserve'});
       ['Compliance frameworks', 'Research papers', 'Business relationships'].forEach((t, i) => {
         const y = 388 + i*42;
         const r = el('rect', {class:'chip', x:834, y, width:252, height:34, rx:17}, og);
@@ -418,7 +418,7 @@ svg.scene.tall{max-height:none}
       T(og, 26, 746, 't-display s-muted', 12.5, 'APNIC · RoVista · MANRS M9 · Is BGP Safe Yet?');
       T(og, 386, 778, 't-mono s-acc', 11.5, 'PUBLISHED ROV SCORE', {'letter-spacing':.6, 'text-anchor':'end'});
       NETS.forEach((n, i) => drawRow(og, n, 22, 788 + i*72, 376, 64, false));
-      T(og, 26, 948, 't-mono s-muted', 11.5, 'SCORES FEED INTO', {'letter-spacing':.6});
+      T(og, 210, 948, 't-mono s-muted', 11.5, '↓  SCORES FEED INTO  ↓', {'letter-spacing':.6, 'text-anchor':'middle', 'xml:space':'preserve'});
       [['Compliance','frameworks'], ['Research','papers'], ['Business','relationships']].forEach((t, i) => {
         const x = 22 + i*128, y = 958;
         const r = el('rect', {class:'chip', x, y, width:118, height:46, rx:14}, og);
