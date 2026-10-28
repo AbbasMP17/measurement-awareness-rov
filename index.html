@@ -132,6 +132,13 @@ svg.scene.tall{max-height:none}
 #nets.hl .cfg-k{text-decoration:underline}
 .asg.hl .asbox{filter:drop-shadow(0 0 8px var(--shadow))}
 .row.hl .rowbox{filter:drop-shadow(0 0 6px var(--shadow))}
+.arrow{opacity:.45;transition:opacity .3s}
+.arrow line{stroke-width:3;transition:stroke-width .3s}
+.arrow polygon{transform-box:fill-box;transform-origin:center;transition:transform .3s}
+.arrow.hl{opacity:1;filter:drop-shadow(0 0 5px currentColor)}
+.arrow.hl line{stroke-width:7}
+.arrow.hl polygon{transform:scale(1.7)}
+#a-pub{color:var(--accent)} #a-sh{color:var(--shadow)}
 
 /* below the stage */
 .label{font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
@@ -373,8 +380,13 @@ svg.scene.tall{max-height:none}
       T(og, 834, 58, 't-display s-ink', 19, 'Observatories');
       T(og, 834, 80, 't-display s-muted', 13.5, 'APNIC · RoVista');
       T(og, 834, 98, 't-display s-muted', 13.5, 'MANRS M9 · Is BGP Safe Yet?');
-      el('line', {class:'link', x1:790, y1:140, x2:812, y2:140}, linksG);
-      el('polygon', {points:'812,133 820,140 812,147', fill:'var(--line)'}, linksG);
+      // two inputs to the panel: public-target results (orange) and shadow-target results (purple)
+      const ap = el('g', {class:'arrow', id:'a-pub'}, linksG);
+      el('line', {stroke:'var(--accent)', x1:790, y1:140, x2:811, y2:140}, ap);
+      el('polygon', {points:'810,133 819,140 810,147', fill:'var(--accent)'}, ap);
+      const as = el('g', {class:'arrow', id:'a-sh'}, linksG);
+      el('line', {stroke:'var(--shadow)', x1:778, y1:297, x2:811, y2:297}, as);
+      el('polygon', {points:'810,290 819,297 810,304', fill:'var(--shadow)'}, as);
       T(og, 1074, 144, 't-mono s-acc', 12, 'ROV SCORE', {'letter-spacing':.8, 'text-anchor':'end'});
       NETS.forEach((n, i) => drawRow(og, n, 834, 156 + i*98, 252, 86, true));
       T(og, 960, 376, 't-mono s-muted', 12, '↓  SCORES FEED INTO  ↓', {'letter-spacing':.8, 'text-anchor':'middle', 'xml:space':'preserve'});
@@ -384,7 +396,7 @@ svg.scene.tall{max-height:none}
         T(og, 960, y+22, 't-display s-ink', 14.5, t, {'text-anchor':'middle'});
         G.chips.push({r, x:960, y:y+17});
       });
-      G.obsIn = {x:820, y:140};
+      G.obsIn = {x:820, y:140}; G.shIn = {x:822, y:297};
     } else {
       NETS.forEach((n, i) => drawNet(netsG, n, 10, [12, 236][i], 388, 210, n.cfgShort, false));
       el('rect', {class:'cloud', x:10, y:466, width:400, height:214, rx:26}, stat);
@@ -426,7 +438,7 @@ svg.scene.tall{max-height:none}
         T(og, x+59, y+36, 't-display s-ink', 12.5, t[1], {'text-anchor':'middle'});
         G.chips.push({r, x:x+59, y:y+23});
       });
-      G.obsIn = {x:210, y:700};
+      G.obsIn = {x:210, y:700}; G.shIn = null;
     }
     bindTarget($('t-pub'), () => single('pub'));
     pktG = el('g', {}, svg); fxG = el('g', {}, svg);
@@ -500,14 +512,16 @@ svg.scene.tall{max-height:none}
     ));
     NETS.forEach((n, i) => { n.res.sh = res[i]; });
     // carry each network's result to its row in the score panel
-    hl(['obs']); follow('obs');
+    hl(['obs', 'ash']); follow('obs');
     await feedback(idx);
     NETS.forEach(draw);
     render();
   }
   async function dot(a, b, color){
     const p = el('circle', {r:8, cx:a.x, cy:a.y, fill:color, stroke:'var(--surface)', 'stroke-width':2}, pktG);
-    await move(p, a, b, 0.38); p.remove();
+    if (G.shIn){ await move(p, a, G.shIn, 0.42); await move(p, G.shIn, b, 0.38); }
+    else await move(p, a, b, 0.38);
+    p.remove();
     const ring = el('circle', {cx:b.x, cy:b.y, r:8, fill:'none', stroke:color, 'stroke-width':3}, fxG);
     await animate(450, t => { ring.setAttribute('r', 8 + 22*t); ring.setAttribute('opacity', 1 - t); });
     ring.remove();
@@ -543,7 +557,7 @@ svg.scene.tall{max-height:none}
   }
   function hl(keys){
     svg.querySelectorAll('.hl').forEach(e => e.classList.remove('hl'));
-    const map = {pub:() => $('t-pub'), sh:() => $('shadows'), obs:() => $('obsg'), nets:() => $('nets'), B:() => NETS[1].g, rowB:() => NETS[1].row};
+    const map = {apub:() => $('a-pub'), ash:() => $('a-sh'), pub:() => $('t-pub'), sh:() => $('shadows'), obs:() => $('obsg'), nets:() => $('nets'), B:() => NETS[1].g, rowB:() => NETS[1].row};
     keys.forEach(k => { const e = map[k] && map[k](); if (e) e.classList.add('hl'); });
   }
   function playLabel(full, short){ const b = $('b-play'); b.querySelector('.full').textContent = full; b.querySelector('.short').textContent = short; }
@@ -580,7 +594,7 @@ svg.scene.tall{max-height:none}
       act('b-pub'); hl(['pub']); follow('nets');
       await setCap('pub', '•', 'RIPE Atlas probes in both networks send traceroutes to the public target.');
       await runPub();
-      hl(['obs']); follow('obs');
+      hl(['obs', 'apub']); follow('obs');
       await publish();
       await setCap('pub', '•', scoreLine());
     } else {
@@ -630,7 +644,7 @@ svg.scene.tall{max-height:none}
     await setCap('pub', 3, 'RIPE Atlas probes in both networks send traceroutes to the public target.');
     await sleep(1200);
     await runPub();
-    hl(['obs']); follow('obs');
+    hl(['obs', 'apub']); follow('obs');
     await setCap('pub', 4, 'Both are dropped inside the network. Observatories publish 100% ROV for A and for B.');
     await publish();
     await sleep(3800);
