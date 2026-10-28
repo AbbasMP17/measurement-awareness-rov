@@ -326,8 +326,9 @@ svg.scene.tall{max-height:none}
     el('rect', {class:'rowbox', x, y, width:w, height:h, rx:12}, g);
     T(g, x+12, y+24, 't-display s-ink', big?16:15, n.name);
     n.scoreEl = T(g, x+w-12, y+(big?34:32), 't-display score-t', big?28:24, '—', {'text-anchor':'end', 'font-weight':800});
-    n.st1 = T(g, x+12, y+(big?58:56), 't-mono st', 11.5, '');
-    n.st2 = T(g, x+12, y+(big?74:72), 't-mono st', 11.5, '');
+    n.oneLine = !big;
+    n.st1 = T(g, x+12, y+(big?58:50), 't-mono st', 11.5, '');
+    n.st2 = T(g, x+12, y+(big?74:66), 't-mono st', 11.5, '');
     n.rowC = {x:x+w/2, y:y+h/2};
   }
 
@@ -335,7 +336,7 @@ svg.scene.tall{max-height:none}
     L = kind;
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     const wide = kind === 'wide';
-    svg.setAttribute('viewBox', wide ? '0 0 1120 616' : '0 0 420 968');
+    svg.setAttribute('viewBox', wide ? '0 0 1120 616' : '0 0 420 1028');
     svg.classList.toggle('tall', !wide);
     const linksG = el('g', {}, svg), stat = el('g', {}, svg), netsG = el('g', {id:'nets'}, svg);
     G = {sh:[], chips:[]};
@@ -374,7 +375,7 @@ svg.scene.tall{max-height:none}
       T(og, 834, 98, 't-display s-muted', 13.5, 'MANRS M9 · Is BGP Safe Yet?');
       el('line', {class:'link', x1:790, y1:140, x2:812, y2:140}, linksG);
       el('polygon', {points:'812,133 820,140 812,147', fill:'var(--line)'}, linksG);
-      T(og, 834, 144, 't-mono s-acc', 12, 'PUBLISHED ROV SCORES', {'letter-spacing':.8});
+      T(og, 1074, 144, 't-mono s-acc', 12, 'PUBLISHED ROV SCORE', {'letter-spacing':.8, 'text-anchor':'end'});
       NETS.forEach((n, i) => drawRow(og, n, 834, 156 + i*98, 252, 86, true));
       T(og, 834, 376, 't-mono s-muted', 12, 'SCORES FEED INTO', {'letter-spacing':.8});
       ['Compliance frameworks', 'Research papers', 'Business relationships'].forEach((t, i) => {
@@ -412,14 +413,14 @@ svg.scene.tall{max-height:none}
         ? [n.probe, n.router, {x:410, y:n.router.y}, {x:410, y:t.y}, t]
         : [n.probe, n.router, {x:410, y:n.router.y}, {x:410, y:575}, {x:t.x, y:575}, t];
       const og = el('g', {id:'obsg'}, stat);
-      el('rect', {class:'obsbox', x:10, y:698, width:400, height:262, rx:22}, og);
+      el('rect', {class:'obsbox', x:10, y:698, width:400, height:318, rx:22}, og);
       T(og, 26, 726, 't-display s-ink', 18, 'Observatories');
       T(og, 26, 746, 't-display s-muted', 12.5, 'APNIC · RoVista · MANRS M9 · Is BGP Safe Yet?');
-      T(og, 26, 772, 't-mono s-acc', 11.5, 'PUBLISHED ROV SCORES', {'letter-spacing':.6});
-      NETS.forEach((n, i) => drawRow(og, n, 22 + i*194, 782, 182, 84, false));
-      T(og, 26, 890, 't-mono s-muted', 11.5, 'SCORES FEED INTO', {'letter-spacing':.6});
+      T(og, 386, 778, 't-mono s-acc', 11.5, 'PUBLISHED ROV SCORE', {'letter-spacing':.6, 'text-anchor':'end'});
+      NETS.forEach((n, i) => drawRow(og, n, 22, 788 + i*72, 376, 64, false));
+      T(og, 26, 948, 't-mono s-muted', 11.5, 'SCORES FEED INTO', {'letter-spacing':.6});
       [['Compliance','frameworks'], ['Research','papers'], ['Business','relationships']].forEach((t, i) => {
-        const x = 22 + i*128, y = 900;
+        const x = 22 + i*128, y = 958;
         const r = el('rect', {class:'chip', x, y, width:118, height:46, rx:14}, og);
         T(og, x+59, y+20, 't-display s-ink', 12.5, t[0], {'text-anchor':'middle'});
         T(og, x+59, y+36, 't-display s-ink', 12.5, t[1], {'text-anchor':'middle'});
@@ -515,7 +516,7 @@ svg.scene.tall{max-height:none}
         else if (s.pub === false && !s.sh){ b = '→ ROV everywhere'; cls = 'okrow'; }
         else if (s.pub === true && s.sh){ b = '→ no ROV'; }
       }
-      n.st1.textContent = a; n.st2.textContent = b;
+      if (n.oneLine){ n.st1.textContent = b ? a + ' ' + b : a; n.st2.textContent = ''; } else { n.st1.textContent = a; n.st2.textContent = b; }
       n.row.classList.toggle('aware', cls === 'aware');
       n.row.classList.toggle('okrow', cls === 'okrow');
     });
