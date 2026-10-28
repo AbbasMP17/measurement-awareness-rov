@@ -96,6 +96,10 @@ svg.scene.tall{max-height:none}
 .awarepill{opacity:0;transition:opacity .5s}
 .asg.aware .awarepill{opacity:1}
 .awarepill rect{fill:var(--shadow)}
+.rovpill{opacity:0;transition:opacity .5s}
+.asg.rovall .rovpill{opacity:1}
+.rovpill rect{fill:var(--ok)}
+.asg.rovall .asbox{stroke:var(--ok);stroke-width:3;fill:var(--ok-soft)}
 .cfgbox{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
 .cfg-k{fill:var(--accent);font-weight:600}
 .cfg-c{fill:var(--muted)}
@@ -305,6 +309,9 @@ svg.scene.tall{max-height:none}
     const pill = el('g', {class:'awarepill'}, g);
     el('rect', {x:x+w-182, y:y-13, width:164, height:26, rx:13}, pill);
     T(pill, x+w-100, y+5, 't-mono s-surface', 12, 'MEASUREMENT-AWARE', {'text-anchor':'middle', 'font-weight':600, 'letter-spacing':.8});
+    const rp = el('g', {class:'rovpill'}, g);
+    el('rect', {x:x+w-166, y:y-13, width:148, height:26, rx:13}, rp);
+    T(rp, x+w-92, y+5, 't-mono s-surface', 12, 'ROV EVERYWHERE', {'text-anchor':'middle', 'font-weight':600, 'letter-spacing':.8});
     const lh = 17, cy0 = y + 62;
     el('rect', {class:'cfgbox', x:x+14, y:cy0, width:w-28, height:lines.length*lh+14, rx:10}, g);
     lines.forEach((ln, i) => {
@@ -511,9 +518,11 @@ svg.scene.tall{max-height:none}
       Promise.all(idx.map((s, j) => sleep(i * 500 + j * 600).then(() => packet(n, G.sh[s], 'sh')))).then(r => r.some(Boolean))
     ));
     NETS.forEach((n, i) => { n.res.sh = res[i]; });
-    // carry each network's result to its row in the score panel
-    hl(['obs', 'ash']); follow('obs');
-    await feedback(idx);
+    // networks that dropped every shadow target are confirmed in place
+    NETS.filter(n => !n.res.sh).forEach(draw);
+    if (NETS.some(n => !n.res.sh)) await sleep(1200);
+    // shadow-target results travel to the score panel
+    if (NETS.some(n => n.res.sh)){ hl(['obs', 'ash']); follow('obs'); await feedback(idx); }
     NETS.forEach(draw);
     render();
   }
@@ -530,13 +539,15 @@ svg.scene.tall{max-height:none}
     const jobs = [];
     NETS.forEach(n => {
       if (n.res.sh) idx.forEach((s, j) => jobs.push(sleep(j * 300).then(() => dot(G.shOut[s], n.rowC, 'var(--shadow)'))));
-      else jobs.push(dot(n.drop, n.rowC, 'var(--ok)'));
     });
     await Promise.all(jobs);
   }
 
   /* ---------- state, highlight, captions ---------- */
-  function draw(n){ n.g.classList.toggle('aware', n.res.pub === false && n.res.sh === true); }
+  function draw(n){
+    n.g.classList.toggle('aware', n.res.pub === false && n.res.sh === true);
+    n.g.classList.toggle('rovall', n.res.pub === false && n.res.sh === false);
+  }
   function render(){
     NETS.forEach(n => {
       const s = n.res, show = published && s.pub !== null;
@@ -587,17 +598,28 @@ svg.scene.tall{max-height:none}
     p.classList.remove('fade');
   }
 
+  async function publicTest(){
+    act('b-pub'); hl(['pub']); follow('nets');
+    await setCap('pub', '•', 'RIPE Atlas probes in both networks send traceroutes to the public target.');
+    await runPub();
+    hl(['obs', 'apub']); follow('obs');
+    await publish();
+    await setCap('pub', '•', scoreLine());
+  }
   async function single(kind, idx){
     if (busy) return; lock(true); focusStage();
     if (kind === 'pub'){
       reset(true);
-      act('b-pub'); hl(['pub']); follow('nets');
-      await setCap('pub', '•', 'RIPE Atlas probes in both networks send traceroutes to the public target.');
-      await runPub();
-      hl(['obs', 'apub']); follow('obs');
-      await publish();
-      await setCap('pub', '•', scoreLine());
+      await publicTest();
     } else {
+      if (!published){
+        // shadow results only mean something next to the published score: run the public test first
+        reset(true);
+        await publicTest();
+        await sleep(2400);
+      } else {
+        NETS.forEach(n => { n.res.sh = null; draw(n); }); hl([]); render();
+      }
       act('b-sh'); hl(['sh']); follow('nets');
       await setCap('sh', '•', idx == null ? 'RIPE Atlas probes send traceroutes to the shadow targets.' : 'RIPE Atlas probes send traceroutes to shadow target ' + (idx + 1) + '.');
       await runSh(idx);
