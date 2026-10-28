@@ -339,7 +339,7 @@ svg.scene.tall{max-height:none}
     svg.setAttribute('viewBox', wide ? '0 0 1120 616' : '0 0 420 1028');
     svg.classList.toggle('tall', !wide);
     const linksG = el('g', {}, svg), stat = el('g', {}, svg), netsG = el('g', {id:'nets'}, svg);
-    G = {sh:[], chips:[]};
+    G = {sh:[], shOut:[], chips:[]};
 
     if (wide){
       NETS.forEach((n, i) => drawNet(netsG, n, 20, [24, 318][i], 470, 280, n.cfg, true));
@@ -362,7 +362,7 @@ svg.scene.tall{max-height:none}
         el('rect', {class:'tgt-sh', x:547, y, width:216, height:62, rx:10}, g);
         T(g, 655, y+26, 't-mono s-sh', 12.5, 'SHADOW TARGET ' + (i+1), {'text-anchor':'middle', 'letter-spacing':.5});
         T(g, 655, y+46, 't-mono s-muted', 12.5, 'RPKI-invalid · undisclosed', {'text-anchor':'middle'});
-        G.sh.push({x:559, y:y+31});
+        G.sh.push({x:559, y:y+31}); G.shOut.push({x:751, y:y+31});
         bindTarget(g, () => single('sh', i));
       });
       NETS.forEach(n => el('line', {class:'link', x1:n.router.x+26, y1:n.router.y, x2:520, y2:n.router.y}, linksG));
@@ -404,7 +404,7 @@ svg.scene.tall{max-height:none}
         el('rect', {class:'tgt-sh', x, y, width:112, height:52, rx:10}, g);
         T(g, x+56, y+22, 't-mono s-sh', 12, 'SHADOW ' + (i+1), {'text-anchor':'middle', 'font-weight':600});
         T(g, x+56, y+40, 't-mono s-muted', 10.5, 'RPKI-invalid', {'text-anchor':'middle'});
-        G.sh.push({x:x+56, y:y+18});
+        G.sh.push({x:x+56, y:y+18}); G.shOut.push({x:x+56, y:y+50});
         bindTarget(g, () => single('sh', i));
       });
       NETS.forEach(n => el('line', {class:'link', x1:n.router.x+23, y1:n.router.y, x2:410, y2:n.router.y}, linksG));
@@ -446,9 +446,9 @@ svg.scene.tall{max-height:none}
       requestAnimationFrame(f);
     });
   }
-  async function move(c, a, b){
+  async function move(c, a, b, sp){
     const d = Math.hypot(b.x - a.x, b.y - a.y);
-    await animate(Math.max(450, d / 0.27), t => { const e = ease(t); c.setAttribute('cx', lerp(a.x, b.x, e)); c.setAttribute('cy', lerp(a.y, b.y, e)); });
+    await animate(Math.max(450, d / (sp || 0.27)), t => { const e = ease(t); c.setAttribute('cx', lerp(a.x, b.x, e)); c.setAttribute('cy', lerp(a.y, b.y, e)); });
   }
   async function packet(n, target, kind){
     const color = COLOR[kind];
@@ -498,8 +498,27 @@ svg.scene.tall{max-height:none}
     const res = await Promise.all(NETS.map((n, i) =>
       Promise.all(idx.map((s, j) => sleep(i * 500 + j * 600).then(() => packet(n, G.sh[s], 'sh')))).then(r => r.some(Boolean))
     ));
-    NETS.forEach((n, i) => { n.res.sh = res[i]; draw(n); });
+    NETS.forEach((n, i) => { n.res.sh = res[i]; });
+    // carry each network's result to its row in the score panel
+    hl(['obs']); follow('obs');
+    await feedback(idx);
+    NETS.forEach(draw);
     render();
+  }
+  async function dot(a, b, color){
+    const p = el('circle', {r:8, cx:a.x, cy:a.y, fill:color, stroke:'var(--surface)', 'stroke-width':2}, pktG);
+    await move(p, a, b, 0.38); p.remove();
+    const ring = el('circle', {cx:b.x, cy:b.y, r:8, fill:'none', stroke:color, 'stroke-width':3}, fxG);
+    await animate(450, t => { ring.setAttribute('r', 8 + 22*t); ring.setAttribute('opacity', 1 - t); });
+    ring.remove();
+  }
+  async function feedback(idx){
+    const jobs = [];
+    NETS.forEach(n => {
+      if (n.res.sh) idx.forEach((s, j) => jobs.push(sleep(j * 300).then(() => dot(G.shOut[s], n.rowC, 'var(--shadow)'))));
+      else jobs.push(dot(n.drop, n.rowC, 'var(--ok)'));
+    });
+    await Promise.all(jobs);
   }
 
   /* ---------- state, highlight, captions ---------- */
@@ -557,6 +576,7 @@ svg.scene.tall{max-height:none}
   async function single(kind, idx){
     if (busy) return; lock(true); focusStage();
     if (kind === 'pub'){
+      reset(true);
       act('b-pub'); hl(['pub']); follow('nets');
       await setCap('pub', '•', 'RIPE Atlas probes in both networks send traceroutes to the public target.');
       await runPub();
