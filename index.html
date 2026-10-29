@@ -82,6 +82,9 @@ header h1 em{font-style:normal;color:var(--accent)}
 .btn.play.active{box-shadow:0 0 0 5px var(--line)}
 .btn.active:disabled{opacity:1}
 .btn .short{display:none}
+.stepnav{display:inline-flex;gap:6px}
+.btn.nav{color:var(--ink);border-width:1.5px;padding:8px 14px}
+.sep{width:1px;height:28px;background:var(--line);margin:0 2px}
 .scene-box{padding:10px 12px 14px}
 svg.scene{display:block;width:100%;height:auto;max-height:calc(100vh - 160px);max-height:calc(100svh - 160px);margin:0 auto}
 svg.scene.tall{max-height:none}
@@ -175,6 +178,7 @@ svg.scene.tall{max-height:none}
   .controls{padding:4px 14px 10px;gap:8px}
   .btn{padding:6px 12px;font-size:14px}
   .btn.ghost{margin-left:auto}
+  .btn.nav{padding:6px 11px}
   .caption p{font-size:15.5px}
   .scene-box{padding:8px 6px 10px}
   .stat{padding:12px}
@@ -183,8 +187,19 @@ svg.scene.tall{max-height:none}
   .closing{padding:24px 20px}
 }
 @media (max-width:480px){
+  .sep{display:none}
+  .controls{padding:4px 10px 10px;gap:4px}
+  .stepnav{gap:4px}
+  .btn{padding:6px 9px;font-size:13px}
+  .btn.nav,.btn.ghost{padding:6px 8px}
+  .btn.ghost{margin-left:0}
   .btn .full{display:none}
   .btn .short{display:inline}
+}
+@media (max-width:380px){
+  .controls{gap:3px;padding-left:8px;padding-right:8px}
+  .btn{padding:6px 7px}
+  .btn.nav,.btn.ghost{padding:6px 7px}
 }
 @media (prefers-reduced-motion: reduce){
   .caption p,.asbox,.awarepill,.chip,.obsbox,.rowbox,.btn{transition:none}
@@ -209,10 +224,15 @@ svg.scene.tall{max-height:none}
     <div class="stage-head">
       <div class="caption" aria-live="polite">
         <div class="stepdot" id="cap-dot">•</div>
-        <p id="cap">Press “Play the story”, or test a target yourself.</p>
+        <p id="cap">Press “Play the story”, or go step by step with Next ▶.</p>
       </div>
       <div class="controls">
         <button class="btn play" id="b-play"><span class="full">▶ Play the story</span><span class="short">▶ Play</span></button>
+        <span class="stepnav" role="group" aria-label="Step through the story">
+          <button class="btn nav" id="b-prev" aria-label="Previous step" title="Previous step (←)">◀<span class="full"> Back</span></button>
+          <button class="btn nav" id="b-next" aria-label="Next step" title="Next step (→)"><span class="full">Next </span>▶</button>
+        </span>
+        <span class="sep" aria-hidden="true"></span>
         <button class="btn pub" id="b-pub"><span class="full">Public target</span><span class="short">Public</span></button>
         <button class="btn sh" id="b-sh"><span class="full">Shadow targets</span><span class="short">Shadow</span></button>
         <button class="btn ghost" id="b-reset" aria-label="Reset"><span class="full">Reset</span><span class="short">↺</span></button>
@@ -284,7 +304,7 @@ svg.scene.tall{max-height:none}
 
   let L = null;          // 'wide' | 'tall'
   let G = {};            // geometry of the current layout
-  let pktG, fxG;
+  let pktG, fxG, marksG;
 
   function el(tag, attrs, parent, text){
     const e = document.createElementNS(NS, tag);
@@ -448,7 +468,7 @@ svg.scene.tall{max-height:none}
       G.obsIn = {x:210, y:700}; G.shIn = null;
     }
     bindTarget($('t-pub'), () => single('pub'));
-    pktG = el('g', {}, svg); fxG = el('g', {}, svg);
+    marksG = el('g', {}, svg); pktG = el('g', {}, svg); fxG = el('g', {}, svg);
     NETS.forEach(draw);
     render();
   }
@@ -469,16 +489,22 @@ svg.scene.tall{max-height:none}
     const d = Math.hypot(b.x - a.x, b.y - a.y);
     await animate(Math.max(450, d / (sp || 0.27)), t => { const e = ease(t); c.setAttribute('cx', lerp(a.x, b.x, e)); c.setAttribute('cy', lerp(a.y, b.y, e)); });
   }
+
+  /* drop marks (✕) stay on screen until the step changes */
+  let marked = new Set();
+  function clearMarks(){ if (marksG) while (marksG.firstChild) marksG.removeChild(marksG.firstChild); marked = new Set(); }
+  async function mark(n, anim){
+    if (marked.has(n.id)) return;
+    marked.add(n.id);
+    const x = el('text', {class:'t-display', fill:'var(--bad)', x:n.drop.x, y:n.drop.y + 15, 'text-anchor':'middle', 'font-size':anim ? 38 : 48, 'font-weight':800}, marksG, '✕');
+    if (anim) await animate(450, t => x.setAttribute('font-size', 38 + 10*t));
+  }
   async function packet(n, target, kind){
     const color = COLOR[kind];
     const c = el('circle', {r:10, cx:n.probe.x, cy:n.probe.y, fill:color, stroke:'var(--surface)', 'stroke-width':2}, pktG);
     if (!reaches(n.pol, kind)){
       await move(c, n.probe, n.drop); c.remove();
-      const x = el('text', {class:'t-display', fill:'var(--bad)', x:n.drop.x, y:n.drop.y + 14, 'text-anchor':'middle', 'font-size':42, 'font-weight':800}, fxG, '✕');
-      await animate(500, t => x.setAttribute('font-size', 42 + 10*t));
-      await sleep(900);
-      await animate(500, t => x.setAttribute('opacity', 1 - t));
-      x.remove();
+      await mark(n, true);
       return false;
     }
     const pts = G.path(n, target);
@@ -488,6 +514,12 @@ svg.scene.tall{max-height:none}
     await animate(700, t => { ring.setAttribute('r', 10 + 28*t); ring.setAttribute('opacity', 1 - t); });
     ring.remove();
     return true;
+  }
+  // traceroutes from both networks; resolves to [reachedA, reachedB]
+  function probe(kind, idx){
+    const targets = kind === 'pub' ? [G.pub] : idx.map(s => G.sh[s]);
+    return Promise.all(NETS.map((n, i) =>
+      Promise.all(targets.map((t, j) => sleep(i * 500 + j * 600).then(() => packet(n, t, kind)))).then(r => r.some(Boolean))));
   }
   async function publish(){
     const box = document.querySelector('#obsg .obsbox');
@@ -508,24 +540,6 @@ svg.scene.tall{max-height:none}
       await sleep(120);
     }
   }
-  async function runPub(){
-    const res = await Promise.all(NETS.map((n, i) => sleep(i * 500).then(() => packet(n, G.pub, 'pub'))));
-    NETS.forEach((n, i) => { n.res.pub = res[i]; draw(n); });
-  }
-  async function runSh(onlyIdx){
-    const idx = onlyIdx == null ? [0,1,2] : [onlyIdx];
-    const res = await Promise.all(NETS.map((n, i) =>
-      Promise.all(idx.map((s, j) => sleep(i * 500 + j * 600).then(() => packet(n, G.sh[s], 'sh')))).then(r => r.some(Boolean))
-    ));
-    NETS.forEach((n, i) => { n.res.sh = res[i]; });
-    // networks that dropped every shadow target are confirmed in place
-    NETS.filter(n => !n.res.sh).forEach(draw);
-    if (NETS.some(n => !n.res.sh)) await sleep(1200);
-    // shadow-target results travel to the score panel
-    if (NETS.some(n => n.res.sh)){ hl(['obs', 'ash']); follow('obs'); await feedback(idx); }
-    NETS.forEach(draw);
-    render();
-  }
   async function dot(a, b, color){
     const p = el('circle', {r:8, cx:a.x, cy:a.y, fill:color, stroke:'var(--surface)', 'stroke-width':2}, pktG);
     if (G.shIn){ await move(p, a, G.shIn, 0.42); await move(p, G.shIn, b, 0.38); }
@@ -543,10 +557,11 @@ svg.scene.tall{max-height:none}
     await Promise.all(jobs);
   }
 
-  /* ---------- state, highlight, captions ---------- */
+  /* ---------- state ---------- */
+  let shPhase = 0;          // 0: shadow test not run · 5: probes done · 6: results reached the score panel
   function draw(n){
-    n.g.classList.toggle('aware', n.res.pub === false && n.res.sh === true);
-    n.g.classList.toggle('rovall', n.res.pub === false && n.res.sh === false);
+    n.g.classList.toggle('aware', shPhase >= 6 && n.res.pub === false && n.res.sh === true);
+    n.g.classList.toggle('rovall', shPhase >= 5 && n.res.pub === false && n.res.sh === false);
   }
   function render(){
     NETS.forEach(n => {
@@ -554,7 +569,7 @@ svg.scene.tall{max-height:none}
       n.scoreEl.textContent = show ? (s.pub ? '0%' : '100%') : '—';
       n.scoreEl.classList.toggle('on', show);
       let a = '', b = '', cls = '';
-      if (s.sh !== null){
+      if (s.sh !== null && (shPhase >= 6 || (shPhase >= 5 && s.sh === false))){
         a = s.sh ? 'reaches shadow targets' : 'drops shadow targets';
         if (s.pub === false && s.sh){ b = '→ measurement-aware'; cls = 'aware'; }
         else if (s.pub === false && !s.sh){ b = '→ ROV everywhere'; cls = 'okrow'; }
@@ -566,7 +581,21 @@ svg.scene.tall{max-height:none}
     });
     G.chips.forEach(c => c.r.classList.toggle('lit', published));
   }
+  // the scene exactly as it is at the end of step k (no animation)
+  function applyState(k, withMarks){
+    NETS.forEach(n => n.res = {pub: k >= 3 ? reaches(n.pol, 'pub') : null, sh: k >= 5 ? reaches(n.pol, 'sh') : null});
+    published = k >= 4;
+    shPhase = k >= 6 ? 6 : k >= 5 ? 5 : 0;
+    clearMarks();
+    if (withMarks && k === 3) NETS.forEach(n => mark(n, false));
+    if (withMarks && k === 5) NETS.filter(n => !n.res.sh).forEach(n => mark(n, false));
+    NETS.forEach(draw); render();
+  }
+
+  /* ---------- highlight, captions ---------- */
+  let lastHl = [];
   function hl(keys){
+    lastHl = keys;
     svg.querySelectorAll('.hl').forEach(e => e.classList.remove('hl'));
     const map = {apub:() => $('a-pub'), ash:() => $('a-sh'), pub:() => $('t-pub'), sh:() => $('shadows'), obs:() => $('obsg'), nets:() => $('nets'), B:() => NETS[1].g, rowB:() => NETS[1].row};
     keys.forEach(k => { const e = map[k] && map[k](); if (e) e.classList.add('hl'); });
@@ -583,12 +612,6 @@ svg.scene.tall{max-height:none}
     if (L === 'wide' && (r.top < -4 || r.bottom > innerHeight + 4)) stage.scrollIntoView({behavior: reduced ? 'auto' : 'smooth', block:'start'});
     if (L === 'tall' && (r.top > innerHeight * 0.5 || r.bottom < innerHeight * 0.5)) stage.scrollIntoView({behavior: reduced ? 'auto' : 'smooth', block:'start'});
   }
-
-  let busy = false, pending = false;
-  function lock(v){
-    busy = v; ['b-play','b-pub','b-sh','b-reset'].forEach(id => $(id).disabled = v);
-    if (!v && pending){ pending = false; const k = pick(); if (k !== L) build(k); }
-  }
   async function setCap(kind, num, text){
     const p = $('cap'), dot = $('cap-dot');
     if (!reduced){ p.classList.add('fade'); await sleep(300); }
@@ -597,95 +620,115 @@ svg.scene.tall{max-height:none}
     p.textContent = text;
     p.classList.remove('fade');
   }
-
-  async function publicTest(){
-    act('b-pub'); hl(['pub']); follow('nets');
-    await setCap('pub', '•', 'RIPE Atlas probes in both networks send traceroutes to the public target.');
-    await runPub();
-    hl(['obs', 'apub']); follow('obs');
-    await publish();
-    await setCap('pub', '•', scoreLine());
-  }
-  async function single(kind, idx){
-    if (busy) return; lock(true); focusStage();
-    if (kind === 'pub'){
-      reset(true);
-      await publicTest();
-    } else {
-      if (!published){
-        // shadow results only mean something next to the published score: run the public test first
-        reset(true);
-        await publicTest();
-        await sleep(2400);
-      } else {
-        NETS.forEach(n => { n.res.sh = null; draw(n); }); hl([]); render();
-      }
-      act('b-sh'); hl(['sh']); follow('nets');
-      await setCap('sh', '•', idx == null ? 'RIPE Atlas probes send traceroutes to the shadow targets.' : 'RIPE Atlas probes send traceroutes to shadow target ' + (idx + 1) + '.');
-      await runSh(idx);
-      const aware = NETS.some(n => n.res.pub === false && n.res.sh === true);
-      hl(aware ? ['B', 'rowB'] : []); follow(aware ? 'B' : 'obs');
-      await setCap('sh', '•', revealLine());
-    }
-    act(null); lock(false);
-  }
-
-  function scoreLine(){
-    const blocked = NETS.filter(n => n.res.pub === false).map(n => n.id);
-    if (blocked.length === 2) return 'Both networks drop it. Observatories publish 100% ROV for A and for B.';
-    if (blocked.length === 1) return 'Network ' + blocked[0] + ' drops it: published ROV score 100%.';
-    return 'No network drops it.';
-  }
   function revealLine(){
     const aware = NETS.filter(n => n.res.pub === false && n.res.sh === true);
     if (aware.length) return aware.map(n => n.name).join(' and ') + ' reaches the shadow targets. Its 100% score shows only what it exposes to observatories.';
-    if (NETS.some(n => n.res.sh === true)) return 'Network B reaches the shadow targets. Now test the public target to compare.';
     return 'Both networks drop the shadow targets.';
   }
-  function reset(silent){
-    NETS.forEach(n => { n.res = {pub:null, sh:null}; draw(n); });
-    published = false; hl([]); act(null); render();
-    playLabel('▶ Play the story', '▶ Play');
-    if (!silent) setCap('', 0, 'Press “Play the story”, or test a target yourself.');
+
+  /* ---------- the story, one step at a time ---------- */
+  const START = 'Press “Play the story”, or go step by step with Next ▶.';
+  let shIdx = [0,1,2];
+  const STEPS = [null,
+    {kind:'pub', cap:'Observatories converge on one public test target: a Cloudflare prefix kept RPKI-invalid for ROV testing.',
+      hl:['pub','obs'], follow:'pub', dwell:4400},
+    {kind:'ink', cap:'Network A applies ROV using RPKI. Network B filters only the public Cloudflare prefix, using an ACL.',
+      hl:['nets'], follow:'nets', dwell:5000},
+    {kind:'pub', act:'b-pub', cap:'RIPE Atlas probes in both networks send traceroutes to the public target.', end:'Both are dropped inside the network.',
+      hl:['pub'], follow:'nets', pre:1000, dwell:2600,
+      run: async () => { const r = await probe('pub'); NETS.forEach((n, i) => { n.res.pub = r[i]; draw(n); }); }},
+    {kind:'pub', act:'b-pub', cap:'Observatories publish 100% ROV for A and for B.',
+      hl:['obs','apub'], follow:'obs', dwell:3800,
+      run: () => publish()},
+    {kind:'sh', act:'b-sh', cap:'Now the shadow targets: equivalent RPKI-invalid prefixes that no observatory publishes.', end:'Network A drops them too. Network B reaches them.',
+      hl:['sh'], follow:'nets', pre:2400, dwell:2400,
+      run: async () => { const r = await probe('sh', shIdx); NETS.forEach((n, i) => n.res.sh = r[i]); shPhase = 5; NETS.forEach(draw); render(); }},
+    {kind:'sh', act:'b-sh', cap:'The shadow-target results go to the score panel.', end:() => revealLine(),
+      hl:['obs','ash'], follow:'obs', endHl:['B','rowB'], endFollow:'B',
+      run: async () => { await feedback(shIdx); shPhase = 6; NETS.forEach(draw); render(); }}
+  ];
+  const LAST = STEPS.length - 1;
+  let cur = 0, playing = false;
+
+  function stepView(k, atEnd){
+    const s = STEPS[k];
+    act(s.act || (playing ? 'b-play' : null));
+    hl(atEnd && s.endHl ? s.endHl : s.hl);
+    const text = atEnd && s.end ? (typeof s.end === 'function' ? s.end() : s.end) : s.cap;
+    return setCap(s.kind, k, text);
+  }
+  // animate step k, starting from the end of step k-1
+  async function runStep(k){
+    const s = STEPS[k];
+    applyState(k - 1, false); cur = k; updNav();
+    follow(s.follow);
+    await stepView(k, false);
+    if (s.pre) await sleep(s.pre);
+    if (s.run) await s.run();
+    if (s.end || s.endHl){ if (s.endFollow) follow(s.endFollow); await stepView(k, true); }
+  }
+  // jump to the end of step k, no animation (reset, layout changes)
+  function showStep(k){
+    cur = k; applyState(k, true); updNav();
+    if (k === 0){ act(null); hl([]); setCap('', 0, START); return; }
+    stepView(k, true);
+    follow(STEPS[k].endFollow || STEPS[k].follow);
+  }
+
+  let busy = false, pending = false;
+  function updNav(){ $('b-prev').disabled = busy || cur <= 0; $('b-next').disabled = busy || cur >= LAST; }
+  function lock(v){
+    busy = v; ['b-play','b-pub','b-sh','b-reset'].forEach(id => $(id).disabled = v);
+    updNav();
+    if (!v && pending){ pending = false; const k = pick(); if (k !== L){ build(k); showStep(cur); } }
+  }
+  async function guarded(fn){
+    if (busy) return;
+    lock(true); focusStage();
+    try { await fn(); } finally { lock(false); }
+  }
+  function single(kind, idx){
+    return guarded(async () => {
+      shIdx = idx == null ? [0,1,2] : [idx];
+      if (kind === 'pub' || cur < 4){
+        await runStep(3); await sleep(900); await runStep(4);
+        if (kind === 'pub') return;
+        await sleep(1800);
+      }
+      await runStep(5); await sleep(1200); await runStep(6);
+    });
   }
 
   $('b-pub').addEventListener('click', () => single('pub'));
   $('b-sh').addEventListener('click', () => single('sh'));
-  $('b-reset').addEventListener('click', () => { if (!busy) reset(false); });
-  $('b-play').addEventListener('click', async () => {
-    if (busy) return; lock(true);
-    reset(true); focusStage();
-    act('b-play'); playLabel('Playing…', '…');
-    hl(['pub', 'obs']); follow('pub');
-    await setCap('pub', 1, 'Observatories converge on one public test target: a Cloudflare prefix kept RPKI-invalid for ROV testing.');
-    await sleep(4400);
-    hl(['nets']); follow('nets');
-    await setCap('ink', 2, 'Network A applies ROV using RPKI. Network B filters only the public Cloudflare prefix, using an ACL.');
-    await sleep(5000);
-    act('b-pub'); hl(['pub']);
-    await setCap('pub', 3, 'RIPE Atlas probes in both networks send traceroutes to the public target.');
-    await sleep(1200);
-    await runPub();
-    hl(['obs', 'apub']); follow('obs');
-    await setCap('pub', 4, 'Both are dropped inside the network. Observatories publish 100% ROV for A and for B.');
-    await publish();
-    await sleep(3800);
-    act('b-sh'); hl(['sh']); follow('sh');
-    await setCap('sh', 5, 'Now the shadow targets: equivalent RPKI-invalid prefixes that no observatory publishes.');
-    await sleep(2600);
-    follow('nets');
-    await runSh();
-    hl(['B', 'rowB']); follow('B');
-    await setCap('sh', 6, revealLine());
-    act(null); playLabel('↻ Play again', '↻ Play');
-    lock(false);
+  $('b-next').addEventListener('click', () => guarded(() => runStep(cur + 1)));
+  // Back replays the previous step (from the end of the step before it)
+  $('b-prev').addEventListener('click', () => { if (busy || cur <= 0) return; if (cur === 1) showStep(0); else guarded(() => runStep(cur - 1)); });
+  $('b-reset').addEventListener('click', () => { if (!busy){ shIdx = [0,1,2]; playLabel('▶ Play the story', '▶ Play'); showStep(0); } });
+  $('b-play').addEventListener('click', () => guarded(async () => {
+    playing = true; shIdx = [0,1,2];
+    playLabel('Playing…', '…'); showStep(0);
+    for (let k = 1; k <= LAST; k++){
+      await runStep(k);
+      if (k < LAST) await sleep(STEPS[k].dwell || 1500);
+    }
+    playing = false; act(null);
+    playLabel('↻ Play again', '↻ Play');
+  }));
+  // arrow keys step through the story (handy when presenting)
+  document.addEventListener('keydown', e => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const tag = (e.target && e.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+    if (e.key === 'ArrowRight' && !$('b-next').disabled){ e.preventDefault(); $('b-next').click(); }
+    if (e.key === 'ArrowLeft' && !$('b-prev').disabled){ e.preventDefault(); $('b-prev').click(); }
   });
 
   /* layout: vertical scene on narrow screens */
   const pick = () => stage.clientWidth < 700 ? 'tall' : 'wide';
-  build(pick());
+  build(pick()); showStep(0);
   if (window.ResizeObserver){
-    new ResizeObserver(() => { const k = pick(); if (k !== L){ if (busy) pending = true; else build(k); } }).observe(stage);
+    new ResizeObserver(() => { const k = pick(); if (k !== L){ if (busy) pending = true; else { build(k); showStep(cur); } } }).observe(stage);
   }
 
   /* autoplay: add #play to the link to start the story, or #loop to repeat it (e.g. on a poster screen) */
