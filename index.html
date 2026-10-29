@@ -224,7 +224,7 @@ svg.scene.tall{max-height:none}
     <div class="stage-head">
       <div class="caption" aria-live="polite">
         <div class="stepdot" id="cap-dot">•</div>
-        <p id="cap">Press “Play the story”, or go step by step with Next ▶.</p>
+        <p id="cap">Press “Play the story”, or use Next ▶ to advance step by step.</p>
       </div>
       <div class="controls">
         <button class="btn play" id="b-play"><span class="full">▶ Play the story</span><span class="short">▶ Play</span></button>
@@ -330,8 +330,8 @@ svg.scene.tall{max-height:none}
     el('rect', {x:x+w-182, y:y-13, width:164, height:26, rx:13}, pill);
     T(pill, x+w-100, y+5, 't-mono s-surface', 12, 'MEASUREMENT-AWARE', {'text-anchor':'middle', 'font-weight':600, 'letter-spacing':.8});
     const rp = el('g', {class:'rovpill'}, g);
-    el('rect', {x:x+w-166, y:y-13, width:148, height:26, rx:13}, rp);
-    T(rp, x+w-92, y+5, 't-mono s-surface', 12, 'ROV EVERYWHERE', {'text-anchor':'middle', 'font-weight':600, 'letter-spacing':.8});
+    el('rect', {x:x+w-84, y:y-13, width:66, height:26, rx:13}, rp);
+    T(rp, x+w-51, y+5, 't-mono s-surface', 12, 'ROV', {'text-anchor':'middle', 'font-weight':600, 'letter-spacing':.8});
     const lh = 17, cy0 = y + 62;
     el('rect', {class:'cfgbox', x:x+14, y:cy0, width:w-28, height:lines.length*lh+14, rx:10}, g);
     lines.forEach((ln, i) => {
@@ -572,7 +572,7 @@ svg.scene.tall{max-height:none}
       if (s.sh !== null && (shPhase >= 6 || (shPhase >= 5 && s.sh === false))){
         a = s.sh ? 'reaches shadow targets' : 'drops shadow targets';
         if (s.pub === false && s.sh){ b = '→ measurement-aware'; cls = 'aware'; }
-        else if (s.pub === false && !s.sh){ b = '→ ROV everywhere'; cls = 'okrow'; }
+        else if (s.pub === false && !s.sh){ b = '→ ROV'; cls = 'okrow'; }
         else if (s.pub === true && s.sh){ b = '→ no ROV'; }
       }
       if (n.oneLine){ n.st1.textContent = b ? a + ' ' + b : a; n.st2.textContent = ''; } else { n.st1.textContent = a; n.st2.textContent = b; }
@@ -627,23 +627,23 @@ svg.scene.tall{max-height:none}
   }
 
   /* ---------- the story, one step at a time ---------- */
-  const START = 'Press “Play the story”, or go step by step with Next ▶.';
+  const START = 'Press “Play the story”, or use Next ▶ to advance step by step.';
   let shIdx = [0,1,2];
   const STEPS = [null,
-    {kind:'pub', cap:'Observatories converge on one public test target: a Cloudflare prefix kept RPKI-invalid for ROV testing.',
+    {kind:'pub', cap:'Many ROV observatories study the propagation of the same RPKI-invalid Cloudflare prefix.',
       hl:['pub','obs'], follow:'pub', dwell:4400},
-    {kind:'ink', cap:'Network A applies ROV using RPKI. Network B filters only the public Cloudflare prefix, using an ACL.',
+    {kind:'ink', cap:'Network A applies ROV using RPKI. Network B filters only the public prefix, using an ACL.',
       hl:['nets'], follow:'nets', dwell:5000},
-    {kind:'pub', act:'b-pub', cap:'RIPE Atlas probes in both networks send traceroutes to the public target.', end:'Both are dropped inside the network.',
+    {kind:'pub', act:'b-pub', cap:'RIPE Atlas probes in both networks run traceroutes to the public target.',
       hl:['pub'], follow:'nets', pre:1000, dwell:2600,
       run: async () => { const r = await probe('pub'); NETS.forEach((n, i) => { n.res.pub = r[i]; draw(n); }); }},
-    {kind:'pub', act:'b-pub', cap:'Observatories publish 100% ROV for A and for B.',
+    {kind:'pub', act:'b-pub', cap:'Both networks filter the public target. Observatories report a 100% ROV score for both.',
       hl:['obs','apub'], follow:'obs', dwell:3800,
       run: () => publish()},
-    {kind:'sh', act:'b-sh', cap:'Now the shadow targets: equivalent RPKI-invalid prefixes that no observatory publishes.', end:'Network A drops them too. Network B reaches them.',
+    {kind:'sh', act:'b-sh', cap:'Now the shadow targets: equivalent RPKI-invalid prefixes that no observatory publishes.',
       hl:['sh'], follow:'nets', pre:2400, dwell:2400,
       run: async () => { const r = await probe('sh', shIdx); NETS.forEach((n, i) => n.res.sh = r[i]); shPhase = 5; NETS.forEach(draw); render(); }},
-    {kind:'sh', act:'b-sh', cap:'The shadow-target results go to the score panel.', end:() => revealLine(),
+    {kind:'sh', act:'b-sh', cap:'Only Network B reaches the shadow targets: evidence of measurement awareness, not ROV.',
       hl:['obs','ash'], follow:'obs', endHl:['B','rowB'], endFollow:'B',
       run: async () => { await feedback(shIdx); shPhase = 6; NETS.forEach(draw); render(); }}
   ];
@@ -655,6 +655,7 @@ svg.scene.tall{max-height:none}
     act(s.act || (playing ? 'b-play' : null));
     hl(atEnd && s.endHl ? s.endHl : s.hl);
     const text = atEnd && s.end ? (typeof s.end === 'function' ? s.end() : s.end) : s.cap;
+    if ($('cap').textContent === text && $('cap-dot').textContent === String(k)) return Promise.resolve();   // same caption: no flicker
     return setCap(s.kind, k, text);
   }
   // animate step k, starting from the end of step k-1
