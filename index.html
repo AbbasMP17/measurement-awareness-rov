@@ -82,6 +82,10 @@ header h1 em{font-style:normal;color:var(--accent)}
 .btn.play.active{box-shadow:0 0 0 5px var(--line)}
 .btn.active:disabled{opacity:1}
 .btn .short{display:none}
+.speed{display:inline-flex;align-items:center;gap:2px;margin-left:auto;padding:3px;border:1px solid var(--line);border-radius:999px;font-size:13px}
+.speed-l{font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:0 6px 0 8px}
+.speed button{border:0;background:transparent;color:var(--muted);font-weight:600;border-radius:999px;padding:4px 10px;font-size:13px}
+.speed button[aria-checked="true"]{background:var(--ink);color:var(--surface)}
 .stepnav{display:inline-flex;gap:6px}
 .btn.nav{color:var(--ink);border-width:1.5px;padding:8px 14px}
 .sep{width:1px;height:28px;background:var(--line);margin:0 2px}
@@ -178,6 +182,7 @@ svg.scene.tall{max-height:none}
   .controls{padding:4px 14px 10px;gap:8px}
   .btn{padding:6px 12px;font-size:14px}
   .btn.ghost{margin-left:auto}
+  .speed{margin-left:0}
   .btn.nav{padding:6px 11px}
   .caption p{font-size:15.5px}
   .scene-box{padding:8px 6px 10px}
@@ -188,6 +193,7 @@ svg.scene.tall{max-height:none}
 }
 @media (max-width:480px){
   .sep{display:none}
+  .speed{order:9;flex-basis:100%;justify-content:center;border:0;padding:0}
   .controls{padding:4px 10px 10px;gap:4px}
   .stepnav{gap:4px}
   .btn{padding:6px 9px;font-size:13px}
@@ -236,6 +242,12 @@ svg.scene.tall{max-height:none}
         <button class="btn pub" id="b-pub"><span class="full">Public target</span><span class="short">Public</span></button>
         <button class="btn sh" id="b-sh"><span class="full">Shadow targets</span><span class="short">Shadow</span></button>
         <button class="btn ghost" id="b-reset" aria-label="Reset"><span class="full">Reset</span><span class="short">↺</span></button>
+        <div class="speed" role="radiogroup" aria-label="Animation speed">
+          <span class="speed-l">Speed</span>
+          <button type="button" role="radio" data-rate="0.5" aria-checked="false">0.5×</button>
+          <button type="button" role="radio" data-rate="1" aria-checked="true">1×</button>
+          <button type="button" role="radio" data-rate="2" aria-checked="false">2×</button>
+        </div>
       </div>
     </div>
     <div class="scene-box">
@@ -284,7 +296,9 @@ svg.scene.tall{max-height:none}
   const $ = id => document.getElementById(id);
   const svg = $('scene'), stage = $('stage');
   const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const SPEED = 1;   // keep the story's timing even with reduced motion
+  // playback speed: 0.5× slower, 2× faster (animations and pauses); remembered per visitor
+  let RATE = 1;
+  try { const r = parseFloat(localStorage.getItem('oel-rate')); if ([0.5, 1, 2].includes(r)) RATE = r; } catch (e) {}
 
   /* config lines: [text, kind]  kind: '' | 'k' highlighted | 'c' comment.  cfgShort is used on phones. */
   const NETS = [
@@ -474,11 +488,12 @@ svg.scene.tall{max-height:none}
   }
 
   /* ---------- animation ---------- */
-  const sleep = ms => new Promise(r => setTimeout(r, ms * SPEED));
+  const sleep = ms => new Promise(r => setTimeout(r, ms / RATE));
   const lerp = (a, b, t) => a + (b - a) * t;
   const ease = t => t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2) / 2;
   function animate(dur, step){
     return new Promise(res => {
+      dur = dur / RATE;
       if (reduced){ setTimeout(() => { step(1); res(); }, dur); return; }   // no movement, same pacing
       const t0 = performance.now();
       function f(now){ const t = Math.min(1, (now - t0) / dur); step(t); if (t < 1) requestAnimationFrame(f); else res(); }
@@ -724,6 +739,16 @@ svg.scene.tall{max-height:none}
     if (e.key === 'ArrowRight' && !$('b-next').disabled){ e.preventDefault(); $('b-next').click(); }
     if (e.key === 'ArrowLeft' && !$('b-prev').disabled){ e.preventDefault(); $('b-prev').click(); }
   });
+
+  /* speed switch */
+  const speedBtns = [...document.querySelectorAll('.speed button')];
+  function setRate(r){
+    RATE = r;
+    speedBtns.forEach(b => b.setAttribute('aria-checked', String(parseFloat(b.dataset.rate) === r)));
+    try { localStorage.setItem('oel-rate', String(r)); } catch (e) {}
+  }
+  speedBtns.forEach(b => b.addEventListener('click', () => setRate(parseFloat(b.dataset.rate))));
+  setRate(RATE);
 
   /* layout: vertical scene on narrow screens */
   const pick = () => stage.clientWidth < 700 ? 'tall' : 'wide';
